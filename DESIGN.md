@@ -137,14 +137,49 @@ Visibility rule for every read: `owner_id = me OR visibility = 'shared'`.
 - Backup: copy `loyalfamily.db` from the volume; restore: copy back. Documented one-liner.
 - Resource target: comfortable on Raspberry Pi-class hardware (≤ 256 MB RAM).
 
-## 8. Build order (suggested milestones)
+## 8. Testable architecture
+
+Module boundaries chosen so the risky logic is testable without browser/camera/network:
+
+```
+src/lib/domain/        pure TS, zero SvelteKit/Node imports → 100% unit-testable
+  permissions.ts       canView/canEdit/canDelete/canToggle(user, card)
+  sync.ts              merge/last-write-wins/tombstone rules (pure functions)
+  symbology.ts         validation, brand→symbology hints
+  import/              LoyalFamily JSON parser (pure: text in → cards out)
+src/lib/ports/         interfaces (injectable, faked in tests)
+  CardRepo             SQLite-backed impl in src/server/ (better-sqlite3)
+  BarcodeDetectorPort  real: BarcodeDetector | zxing fallback; fake in tests
+src/routes/api/        thin HTTP layer: parse → call domain → repo
+```
+
+Tooling:
+
+- **Vitest** unit tests (domain, parsers) + integration tests (API against
+  in-memory SQLite via `better-sqlite3 :memory:`).
+- **Playwright** e2e: the 4 critical flows from REQUIREMENTS §11, incl. an
+  offline scenario (`context.setOffline(true)`) against the built PWA.
+- **Barcode round-trip suite**: JsBarcode/qrcode render → `@zxing/library` (Node)
+  decode → assert equality, one test per symbology incl. edge cases (short codes,
+  checksum digits, non-ASCII in QR).
+- Scanner fallback: fixture images (repo `tests/fixtures/*.jpg`) decoded headlessly.
+- Migration tests: fixture DBs per released version, `migrate(fixture)` in CI.
+- API types shared via TS (no codegen needed — single repo, single language).
+
+CI (GitHub Actions or a Gitea runner):
+`lint → typecheck → unit → integration → e2e → docker build` on every push;
+release = tag → publish image. `CHANGELOG.md` maintained per release to make
+rollback decisions easy.
+
+## 9. Build order (suggested milestones)
 
 1. Scaffold SvelteKit + SQLite schema + auth (register/login/first-admin)
+   — with CI pipeline and the API integration-test harness from day one
 2. Home grid + brand catalog + card CRUD (online only)
-3. Barcode rendering + full-screen barcode view
+3. Barcode rendering + full-screen barcode view + **round-trip test suite**
 4. Scanner (BarcodeDetector + ZXing fallback) + confirm form
 5. PWA: manifest, Service Worker, IndexedDB cache, offline view
-6. Sync queue + `since` pull + tombstones
+6. Sync queue + `since` pull + tombstones + **offline e2e test**
 7. Invites + admin UI
-8. LoyalFamily JSON import + export
+8. LoyalFamily JSON import + export + **parser fixture tests**
 9. Polish: badges, search, wake lock/fullscreen barcode view, empty states

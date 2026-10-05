@@ -139,14 +139,37 @@ attachment is a v2 candidate.
   - schema migrations run automatically at container start
   - must run comfortably on a Raspberry Pi-class machine (≤ 256 MB RAM)
 
-## 11. Non-goals (v1)
+## 11. Testing & regression safety
+
+- **Critical flows must be automated** (they guard every future maintenance change):
+  1. register-first-admin → login → add card (manual entry path) → barcode renders
+  2. permissions: non-owner cannot edit/delete/visibility-toggle a card
+  3. sync: offline mutation → reconnect → correct state on both devices
+  4. import a LoyalFamily export → cards appear with correct symbology
+- **Barcode round-trip test**: for every supported symbology, render the barcode
+  from data and decode it back with an independent decoder → must equal the input.
+  This is the single best regression guard for the core promise ("scannable at the
+  checkout").
+- Scanner logic must be testable **without a camera**: the scanner is an interface
+  (detector injectable); decoder fallback tested against fixture images.
+- API layer tested against a real (in-memory) SQLite, not a mock — schema and
+  migration regressions must be caught.
+- **Migrations are tested**: every migration runs from the previous released
+  schema in CI; a fixture DB per release version is kept in the repo.
+- Offline behavior tested with network disabled in the browser (e2e).
+- CI on every push: typecheck, lint, unit + integration + e2e, Docker build.
+  A release = green CI + version-tagged image; rollback = run the previous tag.
+- No test-only hooks in production code: testability comes from the module
+  boundaries defined in DESIGN.md (pure domain logic, injectable ports).
+
+## 12. Non-goals (v1)
 
 - Gift cards / tickets / coupons.
 - Multi-server / public SaaS / open registration.
 - Card images, receipts, points balance tracking.
 - Wearables, widgets, native apps.
 
-## 12. Decided
+## 13. Decided
 
 1. **Stack**: single **SvelteKit** app (adapter-node) serving both the PWA frontend
    and the JSON API, **better-sqlite3** for storage, TypeScript end-to-end.
