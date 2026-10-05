@@ -124,7 +124,21 @@ Visibility rule for every read: `owner_id = me OR visibility = 'shared'`.
 
 ## 7. Deployment (Docker)
 
-- Multi-stage Dockerfile → slim Node LTS runtime image, version-tagged.
+- **One multi-stage Dockerfile** used for dev, test and production:
+
+  ```
+  base   (node:LTS-alpine, shared layer)
+  deps   (package.json + lock, full install incl. build tools)
+  build  (svelte-kit build → compiled app)
+  test   (vitest unit+integration; playwright e2e against built app)
+  runtime (node:LTS-alpine: compiled app + prod deps + better-sqlite3 prebuilt
+           binary from build stage; non-root user; read-only rootfs; ≤ ~150 MB)
+  ```
+
+  - local & CI run identical targets: `docker build --target test .`,
+    `docker build -t loyalfamily:X .`
+  - `Makefile`: `make test`, `make e2e`, `make build`, `make run` (all Docker-wrapped;
+    no host Node/npm)
 - Stateless image; volume mounted at `DATA_DIR` (default `/data`) holding
   `loyalfamily.db` (+ WAL files).
 - Config via env only: `PORT`, `DATA_DIR`, `COOKIE_SECRET`, `PUBLIC_URL`, `TZ`.
@@ -167,8 +181,9 @@ Tooling:
 - API types shared via TS (no codegen needed — single repo, single language).
 
 CI (GitHub Actions or a Gitea runner):
-`lint → typecheck → unit → integration → e2e → docker build` on every push;
-release = tag → publish image. `CHANGELOG.md` maintained per release to make
+identical to local — `docker build --target test` (lint/typecheck/unit/integration)
+and `--target test-e2e` (Playwright), then the runtime image build; on every push.
+Release = tag → publish image. `CHANGELOG.md` maintained per release to make
 rollback decisions easy.
 
 ## 9. Build order (suggested milestones)

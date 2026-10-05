@@ -138,6 +138,21 @@ attachment is a v2 candidate.
     volume; restore = copy back. Documented one-liner.
   - schema migrations run automatically at container start
   - must run comfortably on a Raspberry Pi-class machine (≤ 256 MB RAM)
+- **Everything runs in containers — the host needs only Docker:**
+  - building, unit/integration/e2e testing, linting and typechecking all execute
+    in Docker stages/targets; no Node/npm toolchain on the host, ever
+  - the same multi-stage Dockerfile defines: `base → deps → build → test → runtime`
+    stages; local dev/test and CI invoke the **same stage targets**
+    (e.g. `docker build --target test .`), so "works on my machine" == "works in CI"
+  - a thin `Makefile` wraps the common ones: `make test`, `make e2e`, `make build`,
+    `make run`
+- **Minimal final image:**
+  - final stage contains only: Node runtime + compiled app + production deps
+    (no source, no dev dependencies, no build toolchain, no npm cache)
+  - target: `node:<LTS>-alpine` or distroless runtime; image ≤ ~150 MB
+  - native modules (better-sqlite3) compiled in a build stage; final stage copies
+    only the compiled artifact
+  - runs as non-root user; read-only filesystem except `DATA_DIR`
 
 ## 11. Testing & regression safety
 
@@ -157,8 +172,10 @@ attachment is a v2 candidate.
 - **Migrations are tested**: every migration runs from the previous released
   schema in CI; a fixture DB per release version is kept in the repo.
 - Offline behavior tested with network disabled in the browser (e2e).
-- CI on every push: typecheck, lint, unit + integration + e2e, Docker build.
-  A release = green CI + version-tagged image; rollback = run the previous tag.
+- CI on every push: typecheck, lint, unit + integration + e2e, Docker build —
+  **all executed inside containers** (same stage targets as local), so the host
+  requires nothing but Docker. A release = green CI + version-tagged image;
+  rollback = run the previous tag.
 - No test-only hooks in production code: testability comes from the module
   boundaries defined in DESIGN.md (pure domain logic, injectable ports).
 
