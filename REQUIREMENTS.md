@@ -36,13 +36,25 @@ Vision: see [README.md](README.md). This document refines it into concrete requi
     (e.g. a private Delhaize card and a shared family Delhaize card).
     The grid shows brand logo; the card detail view lists all cards of that brand
     with their comments.
-- Tapping a card on the home grid shows the barcode/QR **full-screen, max-contrast
-  white rendering**, ready to scan at the checkout. Must work fully offline.
+- Tapping a tile that holds a single card shows the barcode/QR **full-screen,
+  max-contrast white rendering**, ready to scan at the checkout. Must work fully
+  offline.
   Note: browsers cannot change OS screen brightness. We do the best possible:
   fullscreen mode + Screen Wake Lock (where supported) + mostly-white rendering,
   which triggers adaptive brightness on most phones; one-time hint toast telling
   the user to raise brightness.
-- Long-press / menu on a card: edit name, color, visibility (private/shared), delete.
+- Long-press / menu on a tile: card actions — view, edit, delete.
+  Edit (owner only) covers: barcode value, symbology, color, comment, visibility.
+  Brand `name` is fixed for catalog brands; free-text editable only for "Unknown"
+  cards. Delete: owner, or admin (any card).
+
+## 2a. Platforms & installability
+
+- Must be an **installable PWA** (manifest, icons, standalone display, add-to-
+  home-screen) on: **Android Chrome/Edge/Firefox, iOS Safari ≥ 16.4, desktop
+  Chrome/Firefox/Edge**.
+- iOS Safari and Firefox lack `BarcodeDetector` → the WASM scanner fallback and
+  the fullscreen/wake-lock degradations must be exercised on these platforms.
 
 ## 3. Card data model
 
@@ -51,8 +63,8 @@ Vision: see [README.md](README.md). This document refines it into concrete requi
 | `name` | brand name, or free text for "Unknown" |
 | `brandId` | reference into curated brand catalog, or null |
 | `color` | brand color (from catalog) or user-picked |
-| `barcodeValue` | the decoded string |
-| `symbology` | EAN_13, UPC_A, CODE_128, CODE_39, QR (+ AZTEC/DATA_MATRIX/PDF_417 later) |
+| `barcodeValue` | the decoded string; editable by owner |
+| `symbology` | EAN_13, UPC_A, CODE_128, CODE_39, QR (+ AZTEC/DATA_MATRIX/PDF_417 later); editable by owner |
 | `visibility` | `private` (owner only) or `shared` (whole family); owner can toggle |
 | `comment` | optional free text; disambiguates multiple cards of the same brand |
 | `ownerId` | the user who added the card; ownership is fixed |
@@ -78,6 +90,8 @@ attachment is a v2 candidate.
   QR via a QR renderer. Rendered offline from stored data, fast (< ~200 ms to display).
 - **Scan** (add card): camera-based. Use `BarcodeDetector` when available; fall back
   to a WASM decoder (ZXing-js or similar) for iOS Safari / Firefox.
+  The **detection set equals the render set** in v1; scans of other symbologies are
+  rejected with a clear message pointing to manual entry.
 - Manual entry fallback (type number + pick symbology) when camera can't read the card.
 - Scanning may work **offline**: card is stored locally and queued for sync.
 
@@ -85,8 +99,14 @@ attachment is a v2 candidate.
 
 - Server is the source of truth; PWA caches **all visible cards** locally
   (IndexedDB + Service Worker; precache app shell, logos, fonts).
-- Sync strategy v1: **pull on app open + push on mutation**, last-write-wins via
-  `updatedAt`. No WebSockets/CRDTs. Failed pushes retried when back online.
+- Sync strategy v1: **full pull + push on mutation**.
+  - **Pull**: on app open and after any successful push, the server returns the
+    **complete set of cards visible to that user** (incl. tombstones); the client
+    replaces its cache. At ≤ 100 cards a full pull is cheaper than delta logic and
+    eliminates stale-cache bugs (e.g. a card switched shared→private must vanish
+    from other devices; a `?since=` delta would not deliver it).
+  - **Push**: mutations applied optimistically, enqueued, retried when online.
+    Last-write-wins via server-assigned `updatedAt`. No WebSockets/CRDTs.
 - Hard requirement: viewing and displaying cached cards works with **zero network**.
 
 ## 7. Auth & roles
@@ -95,7 +115,14 @@ attachment is a v2 candidate.
   (guarded: only while user table is empty).
 - Users join **only via invitation**: single-use, expiring invite link (no email
   infrastructure required; admin copies the link to the person).
-- Admin can: promote/demote users, remove users, delete any card.
+- Admin can: promote/demote users, remove users, delete any card, set a new
+  password for any user (no email infrastructure exists → no self-service reset).
+- **At least one admin must always exist**: the last admin cannot be demoted or
+  removed.
+- **Removing a user removes all cards they own** (private and shared) — cards are
+  tied to their owner and cannot be reassigned in v1. Other devices converge on
+  the next full pull.
+- Users change their own password while logged in.
 - Visibility default is **private**; sharing is an explicit choice (checkbox at
   creation, toggle later).
 - **Only the owner** (the user who added the card) can toggle a card between
@@ -124,7 +151,7 @@ attachment is a v2 candidate.
 - The server **must be deployable as a single Docker container**:
   - one published image (multi-stage build, small runtime based on Node LTS),
     tagged by version; no other runtime dependencies
-  - **stateless image**: all persistent state (SQLite DB, temp uploads) lives in a
+  - **stateless image**: all persistent state (SQLite DB + WAL) lives in a
     single volume mounted at `DATA_DIR` (default `/data`)
   - configuration **only via environment variables**: `PORT`, `DATA_DIR`,
     `COOKIE_SECRET`, `PUBLIC_URL`, `TZ`
@@ -203,3 +230,9 @@ attachment is a v2 candidate.
 6. **Grid overflow**: continuous scrolling (no paging).
 7. **Tile ordering**: automatic, alphabetical by brand name ("Unknown" cards sort
    by their free-text name).
+8. **Sync**: full pull (no delta) — see §6.
+9. **Card IDs**: client-generated UUIDs, so offline-created cards keep one stable
+   ID across client and server.
+10. **User removal**: cascades to their cards; last admin cannot be removed/demoted.
+11. **Passwords**: self-change while logged in; admin can reset any user's password;
+    no email-based recovery.

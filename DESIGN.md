@@ -22,7 +22,8 @@ Requirements: see [REQUIREMENTS.md](REQUIREMENTS.md). Stack: SvelteKit (adapter-
         │ tap tile (1 card)         → [Barcode view] fullscreen, wake lock, white max-contrast
         │ tap tile (multi card)     → [Brand card list] → [Barcode view]
         │ long-press / menu         → [Card edit] (owner only) / delete
-        │ menu                      → [Admin] users, invites, delete-any-card
+        │ menu                      → [Admin] users (roles, password reset, remove),
+        │                             invites, delete-any-card
 ```
 
 Offline: everything above works except brand-picker is local data (bundled),
@@ -32,7 +33,7 @@ scanner works offline (card queued), barcode view always works from cache.
 
 ```sql
 users (
-  id INTEGER PK,
+  id TEXT PK,                           -- UUID
   username TEXT UNIQUE NOT NULL,        -- login handle
   display_name TEXT NOT NULL,
   password_hash TEXT NOT NULL,          -- argon2id
@@ -41,32 +42,32 @@ users (
 );
 
 invites (
-  id INTEGER PK,
+  id TEXT PK,                           -- UUID
   token TEXT UNIQUE NOT NULL,           -- random 128-bit, in the join URL
-  created_by INTEGER REFERENCES users(id),
+  created_by TEXT REFERENCES users(id),
   expires_at TEXT NOT NULL,             -- created_at + 7 days
-  used_by INTEGER REFERENCES users(id), -- NULL until redeemed (single-use)
+  used_by TEXT REFERENCES users(id),    -- NULL until redeemed (single-use)
   used_at TEXT
 );
 
 cards (
-  id INTEGER PK,
-  owner_id INTEGER NOT NULL REFERENCES users(id),
+  id TEXT PK,                           -- UUID, client-generated (stable across offline create)
+  owner_id TEXT NOT NULL REFERENCES users(id),
   brand_id TEXT,                        -- catalog id, NULL for custom/"Unknown"
   name TEXT NOT NULL,                   -- brand name or free text
   color TEXT NOT NULL,                  -- #rrggbb tile background
   barcode_value TEXT NOT NULL,
-  symbology TEXT NOT NULL,              -- EAN_13 | UPC_A | CODE_128 | CODE_39 | QR | ...
+  symbology TEXT NOT NULL,              -- EAN_13 | UPC_A | CODE_128 | CODE_39 | QR
   visibility TEXT NOT NULL DEFAULT 'private',  -- 'private' | 'shared'
   comment TEXT,
   created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,             -- last-write-wins clock (server-assigned)
-  updated_by INTEGER NOT NULL REFERENCES users(id),
+  updated_at TEXT NOT NULL,             -- last-write-wins clock (server-assigned, UTC ISO)
+  updated_by TEXT NOT NULL REFERENCES users(id),
   deleted_at TEXT                       -- soft delete, for sync tombstones
 );
 
 sync_queue (                                -- client-side only (IndexedDB), shown here for symmetry
-  card_id, op ('create'|'update'|'delete'), payload, base_updated_at, queued_at
+  card_id, op ('create'|'update'|'delete'), payload, queued_at
 );
 ```
 
@@ -76,31 +77,43 @@ Visibility rule for every read: `owner_id = me OR visibility = 'shared'`.
 
 | Method | Path | Notes |
 |---|---|---|
+| GET | `/api/health` | no auth; Docker healthcheck |
 | POST | `/api/register` | allowed only while `users` is empty → first user becomes admin |
 | POST | `/api/join` | redeem invite token → create user (username, display name, password) |
-| POST | `/api/login`, POST | `/api/logout` | session cookie (HttpOnly, SameSite=Lax, Secure) |
+| POST | `/api/login`, `/api/logout` | session cookie (HttpOnly, SameSite=Lax, Secure) |
+| GET | `/api/me` | current user (id, display name, role) — app boot |
+| POST | `/api/me/password` | change own password (requires current password) |
 | GET | `/api/brands` | curated brand catalog (static, also bundled in the PWA) |
-| GET | `/api/cards?since=<iso>` | **sync pull**: my visible cards incl. tombstones changed since `<iso>` |
-| POST | `/api/cards` | create; server assigns id, `updated_at` |
-| PUT | `/api/cards/:id` | update; requires owner; body carries `base_updated_at` → 409 if stale |
+| GET | `/api/cards` | **full pull**: complete set of cards visible to me, incl. tombstones |
+| POST | `/api/cards` | create with **client-generated UUID id**; 409 only on id collision |
+| PUT | `/api/cards/:id` | owner only; server accepts (last-write-wins), assigns `updated_at` |
 | DELETE | `/api/cards/:id` | owner or admin; soft delete (tombstone) |
-| GET | `/api/admin/users`, PUT `/api/admin/users/:id` (role), DELETE `/api/admin/users/:id` | admin only |
-| POST | `/api/admin/invites` → GET `/api/admin/invites` | create/list/revoke invites |
+| GET | `/api/admin/users` | admin only |
+| PUT | `/api/admin/users/:id` | role change or password reset; **cannot demote/remove last admin** |
+| DELETE | `/api/admin/users/:id` | **cascades: deletes all cards owned by that user** |
+| POST | `/api/admin/invites`, GET `/api/admin/invites` | create/list/revoke invites |
 | GET | `/api/export` | full JSON export (my cards + brands) — backup/adoption |
 | POST | `/api/import` | LoyalFamily JSON export (`loyalfamily-json-v1`) → creates cards owned by importer |
 
 ## 4. Sync protocol (deliberately simple)
 
-- Client keeps `lastSyncAt` and a full local copy of its visible cards.
-- **Pull**: on app open (and after any successful push): `GET /api/cards?since=lastSyncAt`
-  → apply inserts/updates/tombstones → update IndexedDB → UI re-renders.
-- **Push**: mutations are applied locally immediately (optimistic), then enqueued.
-  Queue drains FIFO whenever online. Server is authority:
-  - create → server assigns `updated_at`
-  - update → if `base_updated_at` ≠ server's, server accepts anyway **last-write-wins**
-    (owner is the only writer except admin deletes; conflicts are rare and low-stakes)
-  - 404 on update of deleted card → client drops the queue item, pulls.
-- No WebSockets. A background Sync on `online` event + on visibilitychange.
+- Client keeps a full local copy of its visible cards + a `lastSyncAt` timestamp
+  (for UI "synced" display only, not for delta logic).
+- **Pull**: on app open, after any successful push, and on `online`/visibilitychange:
+  `GET /api/cards` (full visible set incl. tombstones) → replace IndexedDB store →
+  UI re-renders. Full replacement converges every device in one step and correctly
+  handles: shared→private toggles, user removal cascades, admin deletes.
+- **Push**: mutations applied locally immediately (optimistic), enqueued FIFO.
+  Card IDs are client-generated UUIDs → an offline-created card keeps the same ID
+  from cradle to server; no ID mapping anywhere.
+  Server rules:
+  - create → validate, insert (409 only on UUID collision)
+  - update → accepted if caller is owner; **last-write-wins**, server assigns
+    `updated_at` (no optimistic-locking 409s — the owner is the only writer)
+  - update/delete of unknown or already-deleted card → 404 → client drops the
+    queue item and pulls
+- No WebSockets. Sync triggers: app open, `online` event, visibilitychange, after push.
+- At ≤ 100 cards the full payload is a few KB; delta sync is a non-goal.
 
 ## 5. Offline architecture
 
@@ -130,7 +143,8 @@ Visibility rule for every read: `owner_id = me OR visibility = 'shared'`.
   base   (node:LTS-alpine, shared layer)
   deps   (package.json + lock, full install incl. build tools)
   build  (svelte-kit build → compiled app)
-  test   (vitest unit+integration; playwright e2e against built app)
+  test   (lint + typecheck + vitest unit/integration)
+  e2e    (playwright against the built app; heavier image, never shipped)
   runtime (node:LTS-alpine: compiled app + prod deps + better-sqlite3 prebuilt
            binary from build stage; non-root user; read-only rootfs; ≤ ~150 MB)
   ```
@@ -181,8 +195,8 @@ Tooling:
 - API types shared via TS (no codegen needed — single repo, single language).
 
 CI (GitHub Actions or a Gitea runner):
-identical to local — `docker build --target test` (lint/typecheck/unit/integration)
-and `--target test-e2e` (Playwright), then the runtime image build; on every push.
+identical to local — `docker build --target test .`, `docker build --target e2e .`,
+then the runtime image build; on every push.
 Release = tag → publish image. `CHANGELOG.md` maintained per release to make
 rollback decisions easy.
 
@@ -194,7 +208,7 @@ rollback decisions easy.
 3. Barcode rendering + full-screen barcode view + **round-trip test suite**
 4. Scanner (BarcodeDetector + ZXing fallback) + confirm form
 5. PWA: manifest, Service Worker, IndexedDB cache, offline view
-6. Sync queue + `since` pull + tombstones + **offline e2e test**
+6. Sync: full pull + push queue + tombstones + **offline e2e test**
 7. Invites + admin UI
 8. LoyalFamily JSON import + export + **parser fixture tests**
 9. Polish: badges, search, wake lock/fullscreen barcode view, empty states
