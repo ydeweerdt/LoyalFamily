@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import CardForm, { type CardFormValues } from '$lib/components/CardForm.svelte';
 	import BarcodeView from '$lib/components/BarcodeView.svelte';
-	import { monogram } from '$lib/brands';
+	import { getBrand, monogram } from '$lib/brands';
 	import { buildTiles, type Tile } from '$lib/domain/cards';
 	import { refreshSession, session } from '$lib/stores/session';
 	import type { Card } from '$lib/types';
@@ -127,6 +127,7 @@
 						comment: editCard.comment ?? ''
 					}}
 					submitLabel="Save"
+					symbologyHint={editCard.brand_id ? getBrand(editCard.brand_id)?.symbology_hint : undefined}
 					onsave={saveEdit}
 					oncancel={() => (editCard = null)}
 				/>

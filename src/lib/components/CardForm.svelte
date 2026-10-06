@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Scanner from '$lib/components/Scanner.svelte';
+	import { validEan13Checksum } from '$lib/domain/validation';
 	import { SYMBOLOGIES } from '$lib/types';
 
 	export type CardFormValues = {
@@ -13,18 +15,25 @@
 	let {
 		initial,
 		submitLabel,
+		symbologyHint,
 		onsave,
 		oncancel
 	}: {
 		initial: CardFormValues;
 		submitLabel: string;
+		symbologyHint?: string;
 		onsave: (values: CardFormValues) => Promise<void>;
 		oncancel: () => void;
 	} = $props();
 
 	let values = $state<CardFormValues>({ ...initial });
+	let scanning = $state(false);
 	let errorMsg = $state('');
 	let busy = $state(false);
+
+	const ean13Bad = $derived(
+		values.symbology === 'EAN_13' && values.barcode_value.length === 13 && !validEan13Checksum(values.barcode_value)
+	);
 
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
@@ -50,8 +59,14 @@
 	</label>
 	<label>
 		Barcode value
-		<input name="barcode_value" bind:value={values.barcode_value} maxlength={512} required />
+		<div class="barrow">
+			<input name="barcode_value" bind:value={values.barcode_value} maxlength={512} required />
+			<button type="button" class="scan" onclick={() => (scanning = true)}>Scan</button>
+		</div>
 	</label>
+	{#if ean13Bad}
+		<p class="warn">⚠ This 13-digit value has an invalid EAN-13 check digit — it may be misread.</p>
+	{/if}
 	<label>
 		Symbology
 		<select name="symbology" bind:value={values.symbology}>
@@ -74,6 +89,17 @@
 		<button type="button" class="secondary" onclick={oncancel}>Cancel</button>
 	</div>
 	{#if errorMsg}<p class="error">{errorMsg}</p>{/if}
+	{#if scanning}
+		<Scanner
+			symbologyHint={symbologyHint}
+			ondetect={(value, symbology) => {
+				values.barcode_value = value;
+				values.symbology = symbology;
+				scanning = false;
+			}}
+			onclose={() => (scanning = false)}
+		/>
+	{/if}
 </form>
 
 <style>
@@ -105,6 +131,22 @@
 	}
 	.secondary {
 		background: #e9ecef;
+	}
+	.barrow {
+		display: flex;
+		gap: 0.4rem;
+	}
+	.barrow input {
+		flex: 1;
+	}
+	.scan {
+		background: #0b7285;
+		color: white;
+		white-space: nowrap;
+	}
+	.warn {
+		color: #b45309;
+		font-size: 0.85rem;
 	}
 	.error {
 		color: #c92a2a;

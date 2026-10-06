@@ -69,7 +69,13 @@
 {:else}
 	<h1>Add card — {picked === 'unknown' ? 'custom' : picked.name}</h1>
 	<button class="secondary" onclick={() => (picked = null)}>← choose another brand</button>
-	<CardForm initial={initialFor(picked)} submitLabel="Add card" onsave={create} oncancel={() => goto('/')} />
+	<CardForm
+		initial={initialFor(picked)}
+		submitLabel="Add card"
+		symbologyHint={picked === 'unknown' ? undefined : picked.symbology_hint}
+		onsave={create}
+		oncancel={() => goto('/')}
+	/>
 {/if}
 
 <style>
