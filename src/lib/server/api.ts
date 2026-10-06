@@ -32,6 +32,16 @@ export function requireUser(
 	return { user };
 }
 
+/** Returns the admin or a ready-to-return 401/403 response. */
+export function requireAdmin(
+	request: Request
+): { user: PublicUser; denied?: undefined } | { user?: undefined; denied: Response } {
+	const r = requireUser(request);
+	if (r.unauthorized) return { denied: r.unauthorized };
+	if (r.user.role !== 'admin') return { denied: error('admin access required', 403) };
+	return { user: r.user };
+}
+
 export async function parseJsonBody(request: Request): Promise<Record<string, unknown> | null> {
 	try {
 		const body = await request.json();

@@ -26,6 +26,8 @@
 	<div class="actions">
 		{#if $session.user}
 			<span class="who">{$session.user.display_name}</span>
+			{#if $session.user.role === 'admin'}<a href="/admin">Admin</a>{/if}
+			<a href="/settings">Settings</a>
 			<button class="link" onclick={() => logout()}>Sign out</button>
 		{:else}
 			<a href="/login">Sign in</a>

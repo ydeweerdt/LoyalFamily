@@ -64,3 +64,36 @@ export function toPublicUser(user: User): PublicUser {
 export function countAdmins(): number {
 	return (db().prepare(`SELECT COUNT(*) AS c FROM users WHERE role = 'admin'`).get() as { c: number }).c;
 }
+
+export function listUsers(): User[] {
+	return db().prepare('SELECT * FROM users ORDER BY created_at ASC').all() as User[];
+}
+
+export function setUserRole(id: string, role: 'admin' | 'user'): void {
+	db().prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id);
+}
+
+export function setPasswordHash(id: string, passwordHash: string): void {
+	db().prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, id);
+}
+
+/**
+ * Remove a user and everything hanging off them (REQUIREMENTS §7:
+ * user removal cascades to their cards). Cards they edited but do not own
+ * (shared cards) keep an audit trail by re-attributing updated_by to the
+ * acting admin.
+ */
+export function deleteUser(id: string, actingAdminId: string): void {
+	db().transaction(() => {
+		db()
+			.prepare('DELETE FROM cards WHERE owner_id = ?')
+			.run(id);
+		db()
+			.prepare('UPDATE cards SET updated_by = ? WHERE updated_by = ?')
+			.run(actingAdminId, id);
+		db()
+			.prepare('DELETE FROM invites WHERE created_by = ? OR used_by = ?')
+			.run(id, id);
+		db().prepare('DELETE FROM users WHERE id = ?').run(id);
+	})();
+}
