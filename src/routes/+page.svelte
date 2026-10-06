@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import CardForm, { type CardFormValues } from '$lib/components/CardForm.svelte';
+	import BarcodeView from '$lib/components/BarcodeView.svelte';
 	import { monogram } from '$lib/brands';
 	import { buildTiles, type Tile } from '$lib/domain/cards';
 	import { refreshSession, session } from '$lib/stores/session';
@@ -9,6 +10,7 @@
 	let cards = $state<Card[]>([]);
 	let openTile = $state<Tile | null>(null);
 	let editCard = $state<Card | null>(null);
+	let barcodeCard = $state<Card | null>(null);
 	let errorMsg = $state('');
 
 	const tiles = $derived($session.user ? buildTiles(cards, $session.user) : []);
@@ -91,6 +93,7 @@
 								</span>
 							</div>
 							<div class="card-actions">
+								<button onclick={() => (barcodeCard = card)}>Barcode</button>
 								{#if canEditCard(card)}
 									<button onclick={() => (editCard = card)}>Edit</button>
 								{/if}
@@ -104,6 +107,10 @@
 				<button class="secondary" onclick={() => (openTile = null)}>Close</button>
 			</div>
 		</div>
+	{/if}
+
+	{#if barcodeCard}
+		<BarcodeView card={barcodeCard} onclose={() => (barcodeCard = null)} />
 	{/if}
 
 	{#if editCard}

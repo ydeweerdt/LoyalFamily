@@ -35,3 +35,11 @@ export function validComment(c: unknown): c is string {
 export function validVisibility(v: unknown): v is 'private' | 'shared' {
 	return v === 'private' || v === 'shared';
 }
+
+/** EAN-13 modulo-10 check digit (used to hint/pre-validate scanned values). */
+export function validEan13Checksum(v: string): boolean {
+	if (!/^\d{13}$/.test(v)) return false;
+	let sum = 0;
+	for (let i = 0; i < 12; i++) sum += +v[i] * (i % 2 === 0 ? 1 : 3);
+	return (10 - (sum % 10)) % 10 === +v[12];
+}
