@@ -3,59 +3,31 @@
 	import CardForm, { type CardFormValues } from '$lib/components/CardForm.svelte';
 	import BarcodeView from '$lib/components/BarcodeView.svelte';
 	import { getBrand, monogram } from '$lib/brands';
-	import { buildTiles, type Tile } from '$lib/domain/cards';
-	import { cacheCards, getCachedCards } from '$lib/idb';
+	import type { Tile } from '$lib/domain/cards';
+	import { cards, loadCards, offline, patchCard, removeCard, tiles } from '$lib/stores/cards';
 	import { refreshSession, session } from '$lib/stores/session';
 	import type { Card } from '$lib/types';
 
-	let cards = $state<Card[]>([]);
 	let openTile = $state<Tile | null>(null);
 	let editCard = $state<Card | null>(null);
 	let barcodeCard = $state<Card | null>(null);
-	let offline = $state(false);
 	let errorMsg = $state('');
-
-	const tiles = $derived($session.user ? buildTiles(cards, $session.user) : []);
 
 	onMount(async () => {
 		await refreshSession();
-		await load();
+		await loadCards();
 	});
-
-	async function load() {
-		if (!$session.user) return;
-		try {
-			const r = await fetch('/api/cards', { credentials: 'same-origin' });
-			if (!r.ok) throw new Error(String(r.status));
-			cards = (await r.json()).cards;
-			offline = false;
-			void cacheCards(cards); // mirror for offline viewing
-		} catch {
-			// offline / server down → render last known good state from IndexedDB
-			cards = await getCachedCards();
-			offline = true;
-		}
-	}
 
 	async function saveEdit(values: CardFormValues) {
 		if (!editCard) return;
-		const r = await fetch(`/api/cards/${editCard.id}`, {
-			method: 'PUT',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify(values),
-			credentials: 'same-origin'
-		});
-		if (!r.ok) throw new Error((await r.json()).error);
+		await patchCard(editCard.id, { ...values });
 		editCard = null;
 		openTile = null;
-		await load();
 	}
 
 	async function remove(card: Card) {
 		if (!confirm(`Delete "${card.name}"${card.comment ? ` (${card.comment})` : ''}?`)) return;
-		const r = await fetch(`/api/cards/${card.id}`, { method: 'DELETE', credentials: 'same-origin' });
-		if (!r.ok) errorMsg = (await r.json()).error;
-		await load();
+		await removeCard(card.id);
 	}
 
 	function canManage(card: Card): boolean {
@@ -74,15 +46,15 @@
 
 	{#if errorMsg}<p class="error">{errorMsg}</p>{/if}
 
-	{#if offline}
+	{#if $offline}
 		<p class="offline">⚠ Offline — showing saved cards. Changes will sync when you reconnect.</p>
 	{/if}
 
-	{#if tiles.length === 0}
+	{#if $tiles.length === 0}
 		<p>No cards yet — tap <b>＋</b> to add your first loyalty card.</p>
 	{:else}
 		<div class="grid">
-			{#each tiles as tile (tile.key)}
+			{#each $tiles as tile (tile.key)}
 				<button class="tile" style="background:{tile.color}" onclick={() => (openTile = tile)}>
 					<span class="mono">{monogram(tile.name)}</span>
 					<span class="label">{tile.name}</span>

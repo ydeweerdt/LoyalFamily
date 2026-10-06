@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import CardForm, { type CardFormValues } from '$lib/components/CardForm.svelte';
 	import { monogram, searchBrands, type Brand } from '$lib/brands';
+	import { addCard } from '$lib/stores/cards';
 	import { refreshSession, session } from '$lib/stores/session';
 
 	let query = $state('');
@@ -33,18 +34,12 @@
 	}
 
 	async function create(values: CardFormValues) {
-		const body = {
+		const res = await addCard({
 			id: crypto.randomUUID(),
 			brand_id: picked && picked !== 'unknown' ? picked.id : null,
 			...values
-		};
-		const r = await fetch('/api/cards', {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify(body),
-			credentials: 'same-origin'
 		});
-		if (!r.ok) throw new Error((await r.json()).error);
+		if (!res.ok) throw new Error(res.error);
 		await goto('/');
 	}
 </script>

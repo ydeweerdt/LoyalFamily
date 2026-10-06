@@ -1,9 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { loadCards } from '$lib/stores/cards';
 	import { logout, session } from '$lib/stores/session';
 	import type { Snippet } from 'svelte';
 
 	let { children }: { children: Snippet } = $props();
+
+	onMount(() => {
+		// reconnect → replay queued mutations and reconcile (DESIGN §6)
+		window.addEventListener('online', () => void loadCards());
+	});
 
 	onMount(() => {
 		// Service worker only for real builds (dev server + SW = confusing cache ghosts)
