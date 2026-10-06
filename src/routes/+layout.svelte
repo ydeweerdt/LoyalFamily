@@ -1,8 +1,18 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { logout, session } from '$lib/stores/session';
 	import type { Snippet } from 'svelte';
 
 	let { children }: { children: Snippet } = $props();
+
+	onMount(() => {
+		// Service worker only for real builds (dev server + SW = confusing cache ghosts)
+		if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+			navigator.serviceWorker.register('/sw.js').catch(() => {
+				/* offline support degrades gracefully */
+			});
+		}
+	});
 </script>
 
 <nav>

@@ -4,6 +4,7 @@
 	import BarcodeView from '$lib/components/BarcodeView.svelte';
 	import { getBrand, monogram } from '$lib/brands';
 	import { buildTiles, type Tile } from '$lib/domain/cards';
+	import { cacheCards, getCachedCards } from '$lib/idb';
 	import { refreshSession, session } from '$lib/stores/session';
 	import type { Card } from '$lib/types';
 
@@ -11,6 +12,7 @@
 	let openTile = $state<Tile | null>(null);
 	let editCard = $state<Card | null>(null);
 	let barcodeCard = $state<Card | null>(null);
+	let offline = $state(false);
 	let errorMsg = $state('');
 
 	const tiles = $derived($session.user ? buildTiles(cards, $session.user) : []);
@@ -22,8 +24,17 @@
 
 	async function load() {
 		if (!$session.user) return;
-		const r = await fetch('/api/cards', { credentials: 'same-origin' });
-		if (r.ok) cards = (await r.json()).cards;
+		try {
+			const r = await fetch('/api/cards', { credentials: 'same-origin' });
+			if (!r.ok) throw new Error(String(r.status));
+			cards = (await r.json()).cards;
+			offline = false;
+			void cacheCards(cards); // mirror for offline viewing
+		} catch {
+			// offline / server down → render last known good state from IndexedDB
+			cards = await getCachedCards();
+			offline = true;
+		}
 	}
 
 	async function saveEdit(values: CardFormValues) {
@@ -62,6 +73,10 @@
 	</div>
 
 	{#if errorMsg}<p class="error">{errorMsg}</p>{/if}
+
+	{#if offline}
+		<p class="offline">⚠ Offline — showing saved cards. Changes will sync when you reconnect.</p>
+	{/if}
 
 	{#if tiles.length === 0}
 		<p>No cards yet — tap <b>＋</b> to add your first loyalty card.</p>
@@ -246,6 +261,13 @@
 	.secondary {
 		background: #e9ecef;
 		margin-top: 0.5rem;
+	}
+	.offline {
+		background: #fff3bf;
+		border: 1px solid #ffd84d;
+		border-radius: 8px;
+		padding: 0.5rem 0.75rem;
+		font-size: 0.85rem;
 	}
 	.error {
 		color: #c92a2a;
