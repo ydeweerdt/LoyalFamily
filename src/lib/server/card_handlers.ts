@@ -14,8 +14,9 @@ import {
 	validUuid,
 	validVisibility
 } from '$lib/domain/validation';
-import { getCard, insertCard, listVisibleCards, softDeleteCard, updateCard, SYMBOLOGIES } from './cards';
+import { getCard, insertCard, listOwnedCards, listVisibleCards, softDeleteCard, updateCard, SYMBOLOGIES } from './cards';
 import type { CardPatch } from './cards';
+import { EXPORT_FORMAT, ParseError, parseExport } from '$lib/domain/import';
 
 export function cardsListHandler(request: Request): Response {
 	const { user, unauthorized } = requireUser(request);
@@ -111,4 +112,70 @@ export function deleteCardHandler(request: Request, id: string): Response {
 
 	softDeleteCard(id);
 	return json({ ok: true });
+}
+
+/* ---------- export / import (REQUIREMENTS §8) ---------- */
+
+export function exportHandler(request: Request): Response {
+	const { user, unauthorized } = requireUser(request);
+	if (unauthorized) return unauthorized;
+	const cards = listOwnedCards(user.id).map((c) => ({
+		id: c.id,
+		brand_id: c.brand_id,
+		name: c.name,
+		color: c.color,
+		barcode_value: c.barcode_value,
+		symbology: c.symbology,
+		visibility: c.visibility,
+		comment: c.comment
+	}));
+	return json(
+		{ format: EXPORT_FORMAT, exported_at: new Date().toISOString(), cards },
+		200,
+		{ 'content-disposition': 'attachment; filename="loyalfamily-export.json"' }
+	);
+}
+
+export async function importHandler(request: Request): Promise<Response> {
+	const { user, unauthorized } = requireUser(request);
+	if (unauthorized) return unauthorized;
+
+	const raw = await request.text();
+	let result;
+	try {
+		// accept either the JSON document itself or it wrapped as a string body
+		let text = raw;
+		try {
+			const parsed = JSON.parse(raw);
+			if (typeof parsed === 'string') text = parsed;
+		} catch {
+			/* not JSON at all → let parseExport report it */
+		}
+		result = parseExport(text);
+	} catch (e) {
+		if (e instanceof ParseError) return error(e.message, 400);
+		throw e;
+	}
+	if (result.cards.length === 0) {
+		return error(result.skipped.length ? 'no importable cards in file' : 'file contains no cards', 400);
+	}
+
+	let imported = 0;
+	for (const c of result.cards) {
+		let id = c.id;
+		if (getCard(id)) id = crypto.randomUUID(); // collision with existing card → fresh id, never abort
+		insertCard({
+			id,
+			owner_id: user.id, // imported cards belong to the importer
+			brand_id: c.brand_id,
+			name: c.name,
+			color: c.color,
+			barcode_value: c.barcode_value,
+			symbology: c.symbology,
+			visibility: c.visibility,
+			comment: c.comment
+		});
+		imported++;
+	}
+	return json({ imported, skipped: result.skipped, source: result.source }, 200);
 }

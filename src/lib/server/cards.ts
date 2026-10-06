@@ -46,6 +46,11 @@ export function listVisibleCards(userId: string): Card[] {
 		.all(userId) as Card[];
 }
 
+/** All live cards owned by a user (their export set — private included). */
+export function listOwnedCards(userId: string): Card[] {
+	return db().prepare('SELECT * FROM cards WHERE owner_id = ? AND deleted_at IS NULL ORDER BY created_at ASC').all(userId) as Card[];
+}
+
 export interface CardPatch {
 	name?: string;
 	color?: string;

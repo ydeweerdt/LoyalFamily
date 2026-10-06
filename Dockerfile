@@ -31,6 +31,8 @@ RUN npm ci --omit=dev
 # ---- runtime: minimal shipped image ----
 FROM node:22-alpine AS runtime
 ENV NODE_ENV=production
+ENV PORT=8080
+ENV DATA_DIR=/data
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 RUN mkdir -p /data && chown -R app:app /data

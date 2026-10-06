@@ -4,6 +4,7 @@
  * (The camera plumbing lives in Scanner.svelte; this is what we can unit-test.)
  */
 import { BarcodeFormat } from '@zxing/library';
+import type { Card } from '$lib/types';
 
 /** Symbologies the app supports end-to-end (render + scan). */
 export const SCANNABLE: readonly BarcodeFormat[] = [
@@ -25,7 +26,7 @@ export function formatName(f: BarcodeFormat): string {
  * ZXing reports the enum value ('EAN_13') — both normalize here.
  * Anything else (EAN_8, ITF, DATAMATRIX…) → undefined = unsupported.
  */
-export function mapFormat(raw: string): string | undefined {
+export function mapFormat(raw: string): Card['symbology'] | undefined {
 	switch (raw.toUpperCase()) {
 		case 'EAN_13':
 			return 'EAN_13';

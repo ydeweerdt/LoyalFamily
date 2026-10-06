@@ -174,7 +174,7 @@ src/lib/domain/        pure TS, zero SvelteKit/Node imports → 100% unit-testab
   permissions.ts       canView/canEdit/canDelete/canToggle(user, card)
   sync.ts              merge/last-write-wins/tombstone rules (pure functions)
   symbology.ts         validation, brand→symbology hints
-  import/              LoyalFamily JSON parser (pure: text in → cards out)
+  import.ts            LoyalFamily JSON parser (pure: text in → cards out)
 src/lib/ports/         interfaces (injectable, faked in tests)
   CardRepo             SQLite-backed impl in src/server/ (better-sqlite3)
   BarcodeDetectorPort  real: BarcodeDetector | zxing fallback; fake in tests
@@ -202,13 +202,13 @@ rollback decisions easy.
 
 ## 9. Build order (suggested milestones)
 
-1. Scaffold SvelteKit + SQLite schema + auth (register/login/first-admin)
+1. ✅ Scaffold SvelteKit + SQLite schema + auth (register/login/first-admin)
    — with CI pipeline and the API integration-test harness from day one
-2. Home grid + brand catalog + card CRUD (online only)
-3. Barcode rendering + full-screen barcode view + **round-trip test suite**
-4. Scanner (BarcodeDetector + ZXing fallback) + confirm form
-5. PWA: manifest, Service Worker, IndexedDB cache, offline view
-6. Sync: full pull + push queue + tombstones + **offline e2e test**
-7. Invites + admin UI
-8. LoyalFamily JSON import + export + **parser fixture tests**
+2. ✅ Home grid + brand catalog + card CRUD (online only)
+3. ✅ Barcode rendering + full-screen barcode view + **round-trip test suite**
+4. ✅ Scanner (BarcodeDetector + ZXing fallback) + confirm form
+5. ✅ PWA: manifest, Service Worker, IndexedDB cache, offline view
+6. ✅ Sync: full pull + push queue + tombstones + **offline e2e test**
+7. ✅ Invites + admin UI
+8. ✅ LoyalFamily JSON import + export + **parser fixture tests**
 9. Polish: badges, search, wake lock/fullscreen barcode view, empty states
