@@ -4,7 +4,8 @@ import { describe, it, expect } from 'vitest';
 process.env.DATA_DIR = ':memory:';
 process.env.COOKIE_SECRET = 'test-secret-0000000000000000000000000000';
 
-import { registerHandler as register, loginHandler as login, meHandler as me, cardsHandler as cards } from '$lib/server/handlers';
+import { registerHandler as register, loginHandler as login, meHandler as me } from '$lib/server/handlers';
+import { cardsListHandler as cards } from '$lib/server/card_handlers';
 import { GET as health } from '../../src/routes/api/health/+server';
 
 function req(url: string, init?: RequestInit): Request {

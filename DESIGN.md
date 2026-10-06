@@ -84,7 +84,7 @@ Visibility rule for every read: `owner_id = me OR visibility = 'shared'`.
 | GET | `/api/me` | current user (id, display name, role) — app boot |
 | POST | `/api/me/password` | change own password (requires current password) |
 | GET | `/api/brands` | curated brand catalog (static, also bundled in the PWA) |
-| GET | `/api/cards` | **full pull**: complete set of cards visible to me, incl. tombstones |
+| GET | `/api/cards` | **full pull**: complete set of live cards visible to me (tombstones stay server-side; full replacement makes them unnecessary on the client) |
 | POST | `/api/cards` | create with **client-generated UUID id**; 409 only on id collision |
 | PUT | `/api/cards/:id` | owner only; server accepts (last-write-wins), assigns `updated_at` |
 | DELETE | `/api/cards/:id` | owner or admin; soft delete (tombstone) |
@@ -100,7 +100,7 @@ Visibility rule for every read: `owner_id = me OR visibility = 'shared'`.
 - Client keeps a full local copy of its visible cards + a `lastSyncAt` timestamp
   (for UI "synced" display only, not for delta logic).
 - **Pull**: on app open, after any successful push, and on `online`/visibilitychange:
-  `GET /api/cards` (full visible set incl. tombstones) → replace IndexedDB store →
+  `GET /api/cards` (full visible live set) → replace IndexedDB store →
   UI re-renders. Full replacement converges every device in one step and correctly
   handles: shared→private toggles, user removal cascades, admin deletes.
 - **Push**: mutations applied locally immediately (optimistic), enqueued FIFO.

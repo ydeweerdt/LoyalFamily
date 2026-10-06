@@ -49,6 +49,13 @@ export function db(): Database.Database {
 	return _db;
 }
 
+/** Replace the singleton with a fresh DB (used by integration tests). */
+export function resetDb(location = ':memory:'): Database.Database {
+	closeDb();
+	_db = openDb(location);
+	return _db;
+}
+
 export function closeDb(): void {
 	_db?.close();
 	_db = undefined;

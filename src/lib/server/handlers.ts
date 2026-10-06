@@ -3,7 +3,6 @@
  * +server.ts files are thin wrappers that re-export them as kit verbs.
  */
 import { error, json, parseJsonBody, requireUser } from './api';
-import { db } from './db';
 import { countUsers, createUser, hashPassword, findByUsername, toPublicUser, verifyPassword } from './users';
 import { createSessionToken, sessionCookieHeader } from './sessions';
 import { validDisplayName, validPassword, validUsername } from '$lib/domain/validation';
@@ -52,23 +51,4 @@ export function meHandler(request: Request): Response {
 	const { user, unauthorized } = requireUser(request);
 	if (unauthorized) return unauthorized;
 	return json(user);
-}
-
-/**
- * Full pull: complete set of cards visible to this user, incl. tombstones.
- * (Milestone 1: read-only; mutations arrive with the sync milestone.)
- */
-export function cardsHandler(request: Request): Response {
-	const { user, unauthorized } = requireUser(request);
-	if (unauthorized) return unauthorized;
-
-	const rows = db()
-		.prepare(
-			`SELECT * FROM cards
-			 WHERE owner_id = ? OR visibility = 'shared'
-			 ORDER BY updated_at ASC`
-		)
-		.all(user.id);
-
-	return json({ cards: rows });
 }

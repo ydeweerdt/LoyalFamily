@@ -10,6 +10,10 @@ export default defineConfig({
 		}
 	},
 	test: {
-		include: ['tests/**/*.test.ts']
+		include: ['tests/**/*.test.ts'],
+		env: {
+			DATA_DIR: ':memory:',
+			COOKIE_SECRET: 'test-secret-0000000000000000000000000000'
+		}
 	}
 });
