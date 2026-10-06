@@ -2,7 +2,7 @@
 .PHONY: lock test e2e build run dev
 
 lock:
-	docker run --rm -v $(CURDIR):/app -w /app node:22-alpine npm install --package-lock-only
+	docker run --rm -v $(CURDIR):/app -w /app node:22-alpine npm install --package-lock-only --legacy-peer-deps
 
 test:
 	docker build --target test -t loyalfamily-test .

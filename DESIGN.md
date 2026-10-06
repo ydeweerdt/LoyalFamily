@@ -146,7 +146,9 @@ Visibility rule for every read: `owner_id = me OR visibility = 'shared'`.
   test   (lint + typecheck + vitest unit/integration)
   e2e    (playwright against the built app; heavier image, never shipped)
   runtime (node:LTS-alpine: compiled app + prod deps + better-sqlite3 prebuilt
-           binary from build stage; non-root user; read-only rootfs; ≤ ~150 MB)
+           binary from build stage; non-root user; read-only rootfs; app layer ≤ ~40 MB
+           (measured: 26 MB prod node_modules + 7 MB build; 65 MB compressed pull size —
+           the node:22-alpine base is ~238 MB uncompressed and is the floor)
   ```
 
   - local & CI run identical targets: `docker build --target test .`,

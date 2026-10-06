@@ -26,7 +26,9 @@ RUN npx svelte-kit sync \
 # ---- prod-deps: production-only node_modules ----
 FROM base AS prod-deps
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+# --legacy-peer-deps: kit's vite/typescript peers are build-time only; the
+# built server needs kit's regular deps + svelte + native modules, nothing else.
+RUN npm ci --omit=dev --legacy-peer-deps
 
 # ---- runtime: minimal shipped image ----
 FROM node:22-alpine AS runtime

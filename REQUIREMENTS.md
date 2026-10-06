@@ -176,7 +176,7 @@ attachment is a v2 candidate.
 - **Minimal final image:**
   - final stage contains only: Node runtime + compiled app + production deps
     (no source, no dev dependencies, no build toolchain, no npm cache)
-  - target: `node:<LTS>-alpine` or distroless runtime; image ≤ ~150 MB
+  - target: `node:<LTS>-alpine` or distroless runtime; app layer (node_modules + build) ≤ ~40 MB; total ≈ 280 MB uncompressed / ≤ ~70 MB pulled (the node:22-alpine base dominates and is deliberately kept boring)
   - native modules (better-sqlite3) compiled in a build stage; final stage copies
     only the compiled artifact
   - runs as non-root user; read-only filesystem except `DATA_DIR`
