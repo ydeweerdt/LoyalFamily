@@ -1,4 +1,30 @@
 import { describe, it, expect } from 'vitest';
+import { uuid } from '$lib/domain/uuid';
+import { validUuid } from '$lib/domain/validation';
+
+describe('uuid()', () => {
+	it('produces valid v4 UUIDs (100 in a row)', () => {
+		for (let i = 0; i < 100; i++) {
+			const u = uuid();
+			expect(validUuid(u)).toBe(true);
+			expect(u[14]).toBe('4'); // version nibble
+		}
+	});
+
+	it('fallback path (no crypto.randomUUID, e.g. plain-HTTP LAN) also yields valid v4s', () => {
+		const orig = crypto.randomUUID;
+		try {
+			(crypto as { randomUUID?: unknown }).randomUUID = undefined;
+			for (let i = 0; i < 20; i++) {
+				const u = uuid();
+				expect(validUuid(u)).toBe(true);
+				expect(u[14]).toBe('4');
+			}
+		} finally {
+			crypto.randomUUID = orig;
+		}
+	});
+});
 import { canDelete, canEdit, canToggleVisibility, canView, canRemoveOrDemoteAdmin } from '$lib/domain/permissions';
 import { validColor, validDisplayName, validPassword, validUsername } from '$lib/domain/validation';
 import type { Card, PublicUser } from '$lib/types';

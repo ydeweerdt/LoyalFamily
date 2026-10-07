@@ -4,6 +4,7 @@
 	import CardForm, { type CardFormValues } from '$lib/components/CardForm.svelte';
 	import { monogram, searchBrands, type Brand } from '$lib/brands';
 	import { addCard } from '$lib/stores/cards';
+	import { uuid } from '$lib/domain/uuid';
 	import { refreshSession, session } from '$lib/stores/session';
 
 	let query = $state('');
@@ -35,7 +36,7 @@
 
 	async function create(values: CardFormValues) {
 		const res = await addCard({
-			id: crypto.randomUUID(),
+			id: uuid(),
 			brand_id: picked && picked !== 'unknown' ? picked.id : null,
 			...values
 		});

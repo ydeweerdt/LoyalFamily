@@ -6,6 +6,7 @@
  * a bad entry is skipped with a reason instead of failing the whole file.
  */
 import { validColor, validBarcodeValue, validUuid, validVisibility } from '$lib/domain/validation';
+import { uuid } from '$lib/domain/uuid';
 import { SYMBOLOGIES, type Card } from '$lib/types';
 
 export const EXPORT_FORMAT = 'loyalfamily-json-v1';
@@ -62,7 +63,7 @@ function parseCanonicalList(list: unknown[]): Omit<ParseResult, 'source'> {
 		if (!validBarcodeValue(c.barcode_value)) return void skipped.push({ index, reason: 'missing or invalid barcode_value' });
 		const symbology = validSymb(c.symbology) ? c.symbology : guessSymbology(c.barcode_value);
 		cards.push({
-			id: validUuid(c.id) ? c.id : crypto.randomUUID(),
+			id: validUuid(c.id) ? c.id : uuid(),
 			brand_id: typeof c.brand_id === 'string' ? c.brand_id : null,
 			name: typeof c.name === 'string' && c.name.trim() ? c.name.trim() : 'Card',
 			color: validColor(c.color) ? c.color : DEFAULT_COLOR,

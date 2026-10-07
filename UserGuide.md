@@ -46,6 +46,13 @@ changes are waiting).
 
 ## 4. Configuration (environment variables)
 
+> **HTTP vs HTTPS matters.** Browsers only expose the secure-context APIs this
+> app leans on — service worker (offline), camera scanner, PWA install — on
+> `https://` or `localhost`. Plain `http://192.168.x.x:3000` still lets you
+> browse and manage cards, but the scanner and offline mode will be dead.
+> For real family use, put the container behind your TLS proxy (§6) or use
+> Tailscale Serve.
+
 Set these in `docker-compose.yaml` (or your orchestrator):
 
 | Variable | Default | Meaning |

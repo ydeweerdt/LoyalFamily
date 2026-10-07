@@ -8,6 +8,7 @@ import { derived, get, writable } from 'svelte/store';
 import { cacheCards, enqueueOp, getCachedCards, getQueuedOps, removeQueuedOps } from '$lib/idb';
 import { buildTiles } from '$lib/domain/cards';
 import { flushQueue, type CoalescedOp, type QueuedOp } from '$lib/sync';
+import { uuid } from '$lib/domain/uuid';
 import { session } from '$lib/stores/session';
 import type { Card } from '$lib/types';
 
@@ -127,21 +128,21 @@ export async function addCard(input: {
 		deleted_at: null
 	};
 	return mutate(
-		{ id: crypto.randomUUID(), card_id: input.id, op: 'create', payload: { ...input }, ts: Date.now() },
+		{ id: uuid(), card_id: input.id, op: 'create', payload: { ...input }, ts: Date.now() },
 		(list) => [...list.filter((c) => c.id !== card.id), card]
 	);
 }
 
 export async function patchCard(id: string, patch: Record<string, unknown>): Promise<void> {
 	await mutate(
-		{ id: crypto.randomUUID(), card_id: id, op: 'update', payload: patch, ts: Date.now() },
+		{ id: uuid(), card_id: id, op: 'update', payload: patch, ts: Date.now() },
 		(list) => list.map((c) => (c.id === id ? { ...c, ...patch, updated_at: new Date().toISOString() } : c))
 	);
 }
 
 export async function removeCard(id: string): Promise<void> {
 	await mutate(
-		{ id: crypto.randomUUID(), card_id: id, op: 'delete', payload: {}, ts: Date.now() },
+		{ id: uuid(), card_id: id, op: 'delete', payload: {}, ts: Date.now() },
 		(list) => list.filter((c) => c.id !== id)
 	);
 }
