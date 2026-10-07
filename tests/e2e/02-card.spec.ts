@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { addCard, login } from './helpers';
 
+// fake camera so the scan test can exercise the real getUserMedia path
+test.use({ launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] } });
+
 /** Golden flow 2: brand picker → manual entry → tile → full-screen barcode. */
 test('add a card via brand picker and see its barcode full-screen', async ({ page }) => {
 	await login(page, 'papa', 'pass12345');
@@ -75,4 +78,24 @@ test('card form fields are off-limits to password managers', async ({ page }) =>
 	await expect(barcode).toHaveAttribute('data-1p-ignore');
 	await expect(barcode).toHaveAttribute('autocomplete', 'off');
 	await expect(barcode).toHaveAttribute('inputmode', 'numeric');
+});
+
+test('scanning in the add flow prefills the card form', async ({ page }) => {
+	await login(page, 'papa', 'pass12345');
+	// fake camera is real (launch flags below); only the detector is stubbed
+	await page.addInitScript(() => {
+		(window as any).BarcodeDetector = class {
+			async detect() {
+				return [{ format: 'ean_13', rawValue: '5401234567894' }];
+			}
+		};
+	});
+
+	await page.goto('/add');
+	await page.getByPlaceholder('Search brand or store…').fill('carrefour');
+	await page.getByRole('button', { name: 'Carrefour', exact: false }).click();
+	await expect(page.getByRole('dialog', { name: 'Scan barcode' })).toBeVisible();
+
+	await expect(page.locator('input[name="barcode_value"]')).toHaveValue('5401234567894');
+	await expect(page.locator('select[name="symbology"]')).toHaveValue('EAN_13');
 });

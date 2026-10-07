@@ -91,16 +91,17 @@
 			onmanual={() => (scanning = false)}
 			onclose={() => goto('/')}
 		/>
+	{:else}
+		<h1>{t('add_card')} — {picked === 'unknown' ? t('custom') : picked.name}</h1>
+		<button class="secondary" onclick={() => (picked = null)}>{t('choose_another')}</button>
+		<CardForm
+			initial={initialFor(picked)}
+			submitLabel={t('add_card')}
+			symbologyHint={picked === 'unknown' ? undefined : picked.symbology_hint}
+			onsave={create}
+			oncancel={() => goto('/')}
+		/>
 	{/if}
-	<h1>{t('add_card')} — {picked === 'unknown' ? t('custom') : picked.name}</h1>
-	<button class="secondary" onclick={() => (picked = null)}>{t('choose_another')}</button>
-	<CardForm
-		initial={initialFor(picked)}
-		submitLabel={t('add_card')}
-		symbologyHint={picked === 'unknown' ? undefined : picked.symbology_hint}
-		onsave={create}
-		oncancel={() => goto('/')}
-	/>
 {/if}
 
 <style>
