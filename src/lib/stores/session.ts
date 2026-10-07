@@ -36,10 +36,17 @@ export async function refreshSession(): Promise<void> {
 			const user = (await r.json()) as SessionUser;
 			localStorage.setItem(LS_KEY, JSON.stringify(user));
 			session.set({ user, loaded: true });
-		} else {
+			return;
+		}
+		if (r.status === 401 || r.status === 403) {
+			// the server explicitly says: this cookie is no longer valid
 			localStorage.removeItem(LS_KEY);
 			session.set({ user: null, loaded: true });
+			return;
 		}
+		// 5xx (e.g. proxy 502 while the container is down): server is
+		// unreachable, not rejecting us — keep the last known session
+		session.set({ user: readLocal(), loaded: true });
 	} catch {
 		// offline: keep the last known session for the UI
 		session.set({ user: readLocal(), loaded: true });

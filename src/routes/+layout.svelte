@@ -1,10 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { loadCards } from '$lib/stores/cards';
-	import { logout, session } from '$lib/stores/session';
+	import { logout, refreshSession, session } from '$lib/stores/session';
 	import type { Snippet } from 'svelte';
 
 	let { children }: { children: Snippet } = $props();
+
+	onMount(() => {
+		// hydrate the session on every route (offline: from the local mirror)
+		void refreshSession();
+	});
 
 	onMount(() => {
 		// reconnect → replay queued mutations and reconcile (DESIGN §6)

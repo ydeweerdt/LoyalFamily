@@ -9,7 +9,7 @@ import { cacheCards, enqueueOp, getCachedCards, getQueuedOps, removeQueuedOps } 
 import { buildTiles } from '$lib/domain/cards';
 import { flushQueue, type CoalescedOp, type QueuedOp } from '$lib/sync';
 import { uuid } from '$lib/domain/uuid';
-import { session } from '$lib/stores/session';
+import { session, refreshSession } from '$lib/stores/session';
 import type { Card } from '$lib/types';
 
 export const cards = writable<Card[]>([]);
@@ -148,6 +148,7 @@ export async function removeCard(id: string): Promise<void> {
 }
 
 export async function loadCards(): Promise<void> {
+	if (!get(session).loaded) await refreshSession();
 	if (!get(session).user) {
 		cards.set([]);
 		return;

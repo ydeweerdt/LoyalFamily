@@ -22,15 +22,23 @@ function startServer(args: string[]): ChildProcess {
 	});
 }
 
-test('server down (refused + 502) → app shell served from the service worker', async ({ browser }) => {
+test('server down (refused + 502) → app shell + logged-in state served from the service worker', async ({ browser }) => {
 	let srv = startServer(['build/index.js']);
 	await new Promise((r) => setTimeout(r, 2000));
 
 	const page = await browser.newPage();
-	await page.goto(URL); // registers SW + caches the shell
+	await page.goto(URL);
+	// register on this private instance so we have a logged-in state to lose
+	await page.getByRole('link', { name: 'Register', exact: true }).click();
+	await page.fill('input[name="username"]', 'offlinepapa');
+	await page.fill('input[name="display_name"]', 'Offline Papa');
+	await page.fill('input[name="password"]', 'pass12345');
+	await page.getByRole('button', { name: 'Register as first admin' }).click();
+	await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
+
 	await page.evaluate(() => navigator.serviceWorker.ready);
 	await page.reload(); // ensure the SW controls this page
-	await expect(page.getByRole('heading', { name: 'LoyalFamily' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Cards' })).toBeVisible();
 
 	// case 1: container killed → connection refused (deep route: what an
 	// installed app opens when it restores its last URL)
@@ -38,7 +46,9 @@ test('server down (refused + 502) → app shell served from the service worker',
 	await new Promise((r) => setTimeout(r, 500));
 	await page.goto(URL + '/settings');
 	await expect(page.locator('nav')).toBeVisible();
-	await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
+	// NOT the login screen: the session mirror keeps us "signed in" offline
+	await expect(page.getByRole('link', { name: 'Sign in' })).toBeHidden();
+	await expect(page.getByText('Offline Papa')).toBeVisible();
 
 	// case 2: proxy up but backend down → 502 Bad Gateway
 	const fake = startServer([
@@ -47,8 +57,9 @@ test('server down (refused + 502) → app shell served from the service worker',
 	]);
 	await new Promise((r) => setTimeout(r, 1000));
 	await page.goto(URL + '/');
-	await expect(page.getByRole('heading', { name: 'LoyalFamily' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Cards' })).toBeVisible();
 	await expect(page.getByText('Bad Gateway')).toBeHidden();
+	await expect(page.getByText('Offline Papa')).toBeVisible();
 
 	fake.kill();
 	await page.close();
