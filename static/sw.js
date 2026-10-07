@@ -8,7 +8,15 @@
  */
 const SHELL_CACHE = 'loyalfamily-shell-v1';
 
-self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('install', (e) => {
+	// best-effort shell precache so a fresh install can boot offline immediately
+	e.waitUntil(
+		fetch('/')
+			.then((res) => (res.ok ? caches.open(SHELL_CACHE).then((c) => c.put('/', res)) : null))
+			.catch(() => null)
+	);
+	self.skipWaiting();
+});
 
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 
@@ -24,12 +32,16 @@ self.addEventListener('fetch', (e) => {
 		e.respondWith(
 			fetch(req)
 				.then((res) => {
-					// keep a fresh copy of the app shell for offline launches
+					// a 502/503/504 from the proxy means the server is down —
+					// that is an offline situation, not a page to display
+					if (!res.ok) throw new Error('server error ' + res.status);
 					const copy = res.clone();
-					caches.open(SHELL_CACHE).then((c) => c.put('/', copy));
+					e.waitUntil(caches.open(SHELL_CACHE).then((c) => c.put('/', copy)));
 					return res;
 				})
-				.catch(() => caches.match('/').then((r) => r || Response.error()))
+				.catch(() =>
+					caches.match('/').then((r) => r || Response.error())
+				)
 		);
 		return;
 	}
