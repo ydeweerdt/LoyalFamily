@@ -2,6 +2,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { BrowserMultiFormatReader, DecodeHintType, type Result } from '@zxing/library';
 	import { formatName, mapFormat, orderedFormats } from '$lib/domain/scanner';
+	import { t } from '$lib/i18n.svelte';
 
 	/**
 	 * Camera scanner overlay.
@@ -22,7 +23,7 @@
 	} = $props();
 
 	let videoEl = $state<HTMLVideoElement | undefined>();
-	let status = $state('Requesting camera…');
+	let status = $state(t('requesting_camera'));
 	let stream: MediaStream | undefined;
 	let reader: BrowserMultiFormatReader | undefined;
 	let timer: ReturnType<typeof setInterval> | undefined;
@@ -48,7 +49,7 @@
 		try {
 			stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
 		} catch {
-			status = 'Camera unavailable (permission or insecure context) — enter the value manually.';
+			status = t('camera_unavailable');
 			return;
 		}
 		if (done || !videoEl) return;
@@ -59,7 +60,7 @@
 
 		// @ts-expect-error BarcodeDetector is not in the standard TS DOM lib yet
 		if (typeof BarcodeDetector === 'function') {
-			status = 'Scanning…';
+			status = t('scanning');
 			// @ts-expect-error see above
 			const detector = new BarcodeDetector({ formats: formats.map((f) => formatName(f).toLowerCase()) });
 			timer = setInterval(async () => {
@@ -79,7 +80,7 @@
 				}
 			}, 300);
 		} else {
-			status = 'Scanning (compatibility mode)…';
+			status = t('scanning_compat');
 			const hints = new Map();
 			hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
 			hints.set(DecodeHintType.TRY_HARDER, true);
@@ -96,8 +97,8 @@
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && onclose()} />
 
-<div class="scanner" role="dialog" aria-label="Scan barcode">
-	<button class="back" aria-label="Back" title="Abort card addition" onclick={onclose}>
+<div class="scanner" role="dialog" aria-label={t('scan_barcode')}>
+	<button class="back" aria-label={t('back')} title={t('back')} onclick={onclose}>
 		<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
 			<path fill="currentColor" d="M20 11H7.8l5.1-5.1L12 5l-7 7 7 7 1.1-1.1L7.8 13H20v-2z" />
 		</svg>
@@ -106,7 +107,7 @@
 	<div class="frame" aria-hidden="true"></div>
 	<p class="status">{status}</p>
 	<div class="controls">
-		<button class="secondary" onclick={onmanual}>Manual</button>
+		<button class="secondary" onclick={onmanual}>{t('manual')}</button>
 	</div>
 </div>
 

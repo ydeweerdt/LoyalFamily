@@ -7,6 +7,7 @@
 	import { filterTiles, type Tile } from '$lib/domain/cards';
 	import { cards, loadCards, offline, pending, patchCard, removeCard, tiles } from '$lib/stores/cards';
 	import { refreshSession, session } from '$lib/stores/session';
+	import { t } from '$lib/i18n.svelte';
 	import type { Card } from '$lib/types';
 
 	let openTile = $state<Tile | null>(null);
@@ -88,33 +89,33 @@
 
 {#if $session.user}
 	<div class="toolbar">
-		<h1>Cards</h1>
-		<a href="/add" class="add" title="Add card">＋</a>
+		<h1>{t('cards')}</h1>
+		<a href="/add" class="add" title={t('add_card_title')}>＋</a>
 	</div>
 
 	{#if errorMsg}<p class="error">{errorMsg}</p>{/if}
 
 	{#if $offline}
 		<p class="offline">
-			⚠ Offline — showing saved cards.{$pending > 0 ? ` ${$pending} change${$pending > 1 ? 's' : ''} waiting to sync.` : ''}
+			⚠ {t('offline')}{$pending > 0 ? ` ${$pending} ${t('changes_waiting')}.` : ''}
 		</p>
 	{/if}
 
 	{#if $tiles.length === 0}
-		<p>No cards yet — tap <b>＋</b> to add your first loyalty card.</p>
+		<p>{t('no_cards')}</p>
 	{:else}
 		{#if $tiles.length > 3}
-			<input class="search" type="search" placeholder="Search cards…" bind:value={query} />
+			<input class="search" type="search" placeholder={t('search_cards')} bind:value={query} />
 		{/if}
 		{#if shownTiles.length === 0}
-			<p>No cards match “{query}”.</p>
+			<p>{t('no_match')} “{query}”.</p>
 		{:else}
 		<div class="grid">
 			{#each shownTiles as tile (tile.key)}
 				<button
 					class="tile"
 					style="background:{tile.color}"
-					title={tile.cards.length === 1 ? 'Tap for barcode · hold to edit' : 'Tap to view cards · hold for cards'}
+					title={tile.cards.length === 1 ? t('tile_hint_single') : t('tile_hint_multi')}
 					onclick={() => tap(tile)}
 					onpointerdown={() => startHold(tile)}
 					onpointerup={cancelHold}
@@ -140,7 +141,7 @@
 						<button
 							class="tile"
 							style="background:{card.color}"
-							title="Tap for barcode · hold to edit"
+							title={t('tile_hint_single')}
 							onclick={() => tapCard(card)}
 							onpointerdown={() => startHoldCard(card)}
 							onpointerup={cancelHold}
@@ -153,7 +154,7 @@
 						</button>
 					{/each}
 				</div>
-				<button class="icon-btn" aria-label="Close" title="Close" onclick={() => (openTile = null)}>
+				<button class="icon-btn" aria-label={t('close')} title={t('close')} onclick={() => (openTile = null)}>
 					<Icon name="back" />
 				</button>
 			</div>
@@ -165,9 +166,9 @@
 	{/if}
 
 	{#if editCard}
-		<div class="modal" role="dialog" aria-label="Edit card">
+		<div class="modal" role="dialog" aria-label={t('edit_card')}>
 			<div class="modal-body">
-				<h2><Icon name="pencil" size={18} /> Edit card</h2>
+				<h2><Icon name="pencil" size={18} /> {t('edit_card')}</h2>
 				<CardForm
 					initial={{
 						name: editCard.name,
@@ -177,13 +178,13 @@
 						visibility: editCard.visibility,
 						comment: editCard.comment ?? ''
 					}}
-					submitLabel="Save"
+					submitLabel={t('save')}
 					symbologyHint={editCard.brand_id ? getBrand(editCard.brand_id)?.symbology_hint : undefined}
 					onsave={saveEdit}
 					oncancel={() => (editCard = null)}
 				/>
 				{#if canManage(editCard)}
-					<button class="icon-btn danger" aria-label="Delete card" title="Delete card" onclick={() => editCard && remove(editCard)}>
+					<button class="icon-btn danger" aria-label={t('delete_card')} title={t('delete_card')} onclick={() => editCard && remove(editCard)}>
 						<Icon name="trash" />
 					</button>
 				{/if}
@@ -192,8 +193,8 @@
 	{/if}
 {:else}
 	<h1>LoyalFamily</h1>
-	<p>Your family loyalty cards — private, self-hosted, offline-ready.</p>
-	<p><a href="/register">Register the first (admin) account</a> or <a href="/login">sign in</a>.</p>
+	<p>{t('tagline')}</p>
+	<p><a href="/register">{t('register_first')}</a> {t('or')} <a href="/login">{t('sign_in')}</a>.</p>
 {/if}
 
 <style>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { refreshSession } from '$lib/stores/session';
+	import { t } from '$lib/i18n.svelte';
 
 	let username = $state('');
 	let password = $state('');
@@ -26,17 +27,17 @@
 	}
 </script>
 
-<h1>Sign in</h1>
+<h1>{t('sign_in')}</h1>
 <form onsubmit={submit}>
 	<label>
-		Username
+		{t('username')}
 		<input name="username" bind:value={username} autocomplete="username" required />
 	</label>
 	<label>
-		Password
+		{t('password')}
 		<input name="password" type="password" bind:value={password} autocomplete="current-password" required />
 	</label>
-	<button disabled={busy}>Sign in</button>
+	<button disabled={busy}>{t('sign_in')}</button>
 </form>
 {#if errorMsg}<p class="error">{errorMsg}</p>{/if}
 

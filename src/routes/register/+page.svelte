@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { refreshSession } from '$lib/stores/session';
+	import { t } from '$lib/i18n.svelte';
 
 	let username = $state('');
 	let displayName = $state('');
@@ -28,25 +29,22 @@
 	}
 </script>
 
-<h1>Register</h1>
-<p class="hint">
-	Registration is only open while the server has no users yet — the first account becomes the
-	administrator. After that, joining requires an invite link from an admin.
-</p>
+<h1>{t('register')}</h1>
+<p class="hint">{t('register_hint')}</p>
 <form onsubmit={submit}>
 	<label>
-		Username
+		{t('username')}
 		<input name="username" bind:value={username} autocomplete="username" required />
 	</label>
 	<label>
-		Display name
+		{t('display_name')}
 		<input name="display_name" bind:value={displayName} autocomplete="name" required />
 	</label>
 	<label>
-		Password
+		{t('password')}
 		<input name="password" type="password" bind:value={password} autocomplete="new-password" required />
 	</label>
-	<button disabled={busy}>Register as first admin</button>
+	<button disabled={busy}>{t('register_as_first')}</button>
 </form>
 {#if errorMsg}<p class="error">{errorMsg}</p>{/if}
 {#if info}<p>{info}</p>{/if}

@@ -7,6 +7,7 @@
 	import { addCard } from '$lib/stores/cards';
 	import { uuid } from '$lib/domain/uuid';
 	import { refreshSession, session } from '$lib/stores/session';
+	import { t } from '$lib/i18n.svelte';
 
 	let query = $state('');
 	let picked = $state<Brand | 'unknown' | null>(null);
@@ -60,12 +61,12 @@
 </script>
 
 {#if !$session.user}
-	<p><a href="/login">Sign in</a> to add cards.</p>
+	<p><a href="/login">{t('sign_in_to_add')}</a></p>
 {:else if picked === null}
-	<h1>Add card</h1>
-	<input class="search" type="search" placeholder="Search brand or store…" bind:value={query} />
+	<h1>{t('add_card')}</h1>
+	<input class="search" type="search" placeholder={t('search_brand')} bind:value={query} />
 	{#if brands.length === 0}
-		<p>No catalog brand matches “{query}” — use <b>Unknown</b> below for a free-text card.</p>
+		<p>{t('no_brand_match')}</p>
 	{/if}
 	<div class="grid">
 		{#each brands as brand (brand.id)}
@@ -76,7 +77,7 @@
 		{/each}
 		<button class="tile unknown" onclick={() => pick('unknown')}>
 			<span class="mono">?</span>
-			<span class="label">Unknown</span>
+			<span class="label">{t('unknown')}</span>
 		</button>
 	</div>
 {:else}
@@ -91,11 +92,11 @@
 			onclose={() => goto('/')}
 		/>
 	{/if}
-	<h1>Add card — {picked === 'unknown' ? 'custom' : picked.name}</h1>
-	<button class="secondary" onclick={() => (picked = null)}>← choose another brand</button>
+	<h1>{t('add_card')} — {picked === 'unknown' ? t('custom') : picked.name}</h1>
+	<button class="secondary" onclick={() => (picked = null)}>{t('choose_another')}</button>
 	<CardForm
 		initial={initialFor(picked)}
-		submitLabel="Add card"
+		submitLabel={t('add_card')}
 		symbologyHint={picked === 'unknown' ? undefined : picked.symbology_hint}
 		onsave={create}
 		oncancel={() => goto('/')}

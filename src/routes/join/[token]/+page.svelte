@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { refreshSession } from '$lib/stores/session';
+	import { t } from '$lib/i18n.svelte';
 
 	let username = $state('');
 	let displayName = $state('');
@@ -32,8 +33,8 @@
 	}
 </script>
 
-<h1>Join your family's card collection</h1>
-<p>You are using an invite link. Pick a login — you'll start as a regular member.</p>
+<h1>{t('join_title')}</h1>
+<p>{t('join_hint')}</p>
 
 <form
 	onsubmit={(e) => {
@@ -41,10 +42,10 @@
 		join();
 	}}
 >
-	<label>Username <input name="username" bind:value={username} required minlength={3} maxlength={32} pattern="[a-z0-9_.]+" /></label>
-	<label>Display name <input name="display_name" bind:value={displayName} required maxlength={64} /></label>
-	<label>Password <input name="password" type="password" bind:value={password} required minlength={8} /></label>
-	<button disabled={busy}>Join</button>
+	<label>{t('username')} <input name="username" bind:value={username} required minlength={3} maxlength={32} pattern="[a-z0-9_.]+" /></label>
+	<label>{t('display_name')} <input name="display_name" bind:value={displayName} required maxlength={64} /></label>
+	<label>{t('password')} <input name="password" type="password" bind:value={password} required minlength={8} /></label>
+	<button disabled={busy}>{t('join')}</button>
 </form>
 
 {#if errorMsg}<p class="error">{errorMsg}</p>{/if}

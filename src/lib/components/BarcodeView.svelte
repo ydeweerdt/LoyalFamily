@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import Barcode from './Barcode.svelte';
+	import { t } from '$lib/i18n.svelte';
 	import type { Card } from '$lib/types';
 
 	/**
@@ -65,20 +66,20 @@
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && onclose()} />
 
-<div class="fullscreen" role="dialog" aria-label="Barcode for {card.name}" bind:this={root}>
+<div class="fullscreen" role="dialog" aria-label={`${t('barcode_for')} ${card.name}`} bind:this={root}>
 	<div class="head">
 		<h2>{card.comment || card.name}</h2>
 		<div class="head-actions">
-			<button class="fs" title="Fullscreen" onclick={toggleFullscreen}>⛶</button>
-			<button class="close" onclick={onclose}>✕</button>
+			<button class="fs" title={t('fullscreen')} onclick={toggleFullscreen}>⛶</button>
+			<button class="close" aria-label={t('close')} title={t('close')} onclick={onclose}>✕</button>
 		</div>
 	</div>
 	<div class="barcode">
 		<Barcode value={card.barcode_value} symbology={card.symbology} height={140} />
 	</div>
-	<p class="hint">Tip: raise your phone brightness and tap ⛶ for best scanner readability.</p>
+	<p class="hint">{t('brightness_tip')}</p>
 	{#if showToast}
-		<div class="toast" role="status">💡 Tip: turn your brightness all the way up — the checkout scanner reads a brighter screen better.</div>
+		<div class="toast" role="status">{t('brightness_toast')}</div>
 	{/if}
 </div>
 

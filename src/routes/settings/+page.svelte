@@ -1,13 +1,18 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { refreshSession, session } from '$lib/stores/session';
+	import { langSetting, setLang, t, tf } from '$lib/i18n.svelte';
 
 	let current = $state('');
 	let next = $state('');
 	let msg = $state('');
 	let isError = $state(false);
+	let langSel = $state('auto');
 
-	onMount(() => refreshSession());
+	onMount(() => {
+		refreshSession();
+		langSel = langSetting();
+	});
 
 	let ioMsg = $state('');
 	let isErrorIo = $state(false);
@@ -15,7 +20,7 @@
 	async function downloadExport() {
 		const r = await fetch('/api/export', { credentials: 'same-origin' });
 		if (!r.ok) {
-			ioMsg = 'Export failed';
+			ioMsg = t('export_failed');
 			isErrorIo = true;
 			return;
 		}
@@ -25,7 +30,7 @@
 		a.download = 'loyalfamily-export.json';
 		a.click();
 		URL.revokeObjectURL(a.href);
-		ioMsg = 'Export downloaded.';
+		ioMsg = t('export_done');
 		isErrorIo = false;
 	}
 
@@ -46,7 +51,7 @@
 			isErrorIo = true;
 			return;
 		}
-		ioMsg = `Imported ${data.imported} cards${data.skipped.length ? ` (${data.skipped.length} skipped)` : ''}.`;
+		ioMsg = tf('imported', { n: data.imported, skipped: data.skipped.length ? tf('skipped', { n: data.skipped.length }) : '' });
 		isErrorIo = false;
 		input.value = '';
 	}
@@ -66,37 +71,50 @@
 			isError = true;
 			return;
 		}
-		msg = 'Password changed.';
+		msg = t('password_changed');
 		current = '';
 		next = '';
 	}
 </script>
 
 {#if !$session.user}
-	<p><a href="/login">Sign in</a> first.</p>
+	<p><a href="/login">{t('sign_in')}</a> {t('or')} <a href="/register">{t('register')}</a>.</p>
 {:else}
-	<h1>Settings</h1>
+	<h1>{t('settings')}</h1>
 
-	<h2>Backup & migration</h2>
+	<h2>{t('language')}</h2>
+	<select
+		value={langSel}
+		onchange={(e) => {
+			langSel = (e.target as HTMLSelectElement).value;
+			setLang(langSel as 'auto' | 'nl' | 'en');
+		}}
+	>
+		<option value="auto">{t('lang_auto')}</option>
+		<option value="nl">Nederlands</option>
+		<option value="en">English</option>
+	</select>
+
+	<h2>{t('backup')}</h2>
 	<div class="row">
-		<button onclick={downloadExport}>Export my cards (JSON)</button>
+		<button onclick={downloadExport}>{t('export_btn')}</button>
 		<label class="file">
-			Import LoyalFamily export (JSON)
+			{t('import_btn')}
 			<input type="file" accept=".json,application/json" onchange={importFile} />
 		</label>
 	</div>
 	{#if ioMsg}<p class={isErrorIo ? 'error' : 'ok'}>{ioMsg}</p>{/if}
 
-	<h2>Change password</h2>
+	<h2>{t('change_password')}</h2>
 	<form
 		onsubmit={(e) => {
 			e.preventDefault();
 			change();
 		}}
 	>
-		<label>Current password <input type="password" bind:value={current} required /></label>
-		<label>New password <input type="password" bind:value={next} required minlength={8} /></label>
-		<button>Change password</button>
+		<label>{t('current_password')} <input type="password" bind:value={current} required /></label>
+		<label>{t('new_password')} <input type="password" bind:value={next} required minlength={8} /></label>
+		<button>{t('change_password')}</button>
 	</form>
 	{#if msg}<p class={isError ? 'error' : 'ok'}>{msg}</p>{/if}
 {/if}

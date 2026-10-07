@@ -2,11 +2,13 @@
 	import { onMount } from 'svelte';
 	import { loadCards } from '$lib/stores/cards';
 	import { logout, refreshSession, session } from '$lib/stores/session';
+	import { initLang, t } from '$lib/i18n.svelte';
 	import type { Snippet } from 'svelte';
 
 	let { children }: { children: Snippet } = $props();
 
 	let menuOpen = $state(false);
+	initLang();
 
 	onMount(() => {
 		// hydrate the session on every route (offline: from the local mirror)
@@ -34,7 +36,7 @@
 		{#if $session.user}
 			<button
 				class="menu-btn"
-				aria-label="Menu"
+				aria-label={t('menu')}
 				aria-expanded={menuOpen}
 				onclick={() => (menuOpen = !menuOpen)}
 			>
@@ -47,15 +49,15 @@
 				<div class="menu-panel">
 					<span class="who">{$session.user.display_name}</span>
 					{#if $session.user.role === 'admin'}
-						<a href="/admin" onclick={() => (menuOpen = false)}>Admin</a>
+						<a href="/admin" onclick={() => (menuOpen = false)}>{t('admin')}</a>
 					{/if}
-					<a href="/settings" onclick={() => (menuOpen = false)}>Settings</a>
-					<button onclick={() => { menuOpen = false; logout(); }}>Sign out</button>
+					<a href="/settings" onclick={() => (menuOpen = false)}>{t('settings')}</a>
+					<button onclick={() => { menuOpen = false; logout(); }}>{t('sign_out')}</button>
 				</div>
 			{/if}
 		{:else}
-			<a href="/login">Sign in</a>
-			<a href="/register">Register</a>
+			<a href="/login">{t('sign_in')}</a>
+			<a href="/register">{t('register')}</a>
 		{/if}
 	</div>
 </nav>

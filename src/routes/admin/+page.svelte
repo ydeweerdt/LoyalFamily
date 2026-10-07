@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { refreshSession, session } from '$lib/stores/session';
+	import { t, tf } from '$lib/i18n.svelte';
 	import type { PublicUser } from '$lib/types';
 
 	interface InviteRow {
@@ -26,7 +27,7 @@
 	async function load() {
 		const [u, i] = await Promise.all([fetch('/api/admin/users', { credentials: 'same-origin' }), fetch('/api/admin/invites', { credentials: 'same-origin' })]);
 		if (!u.ok || !i.ok) {
-			errorMsg = 'Failed to load admin data';
+			errorMsg = t('admin_load_failed');
 			return;
 		}
 		users = (await u.json()).users;
@@ -59,68 +60,68 @@
 
 	async function toggleRole(u: PublicUser) {
 		const role = u.role === 'admin' ? 'user' : 'admin';
-		if (!confirm(`${role === 'admin' ? 'Promote' : 'Demote'} ${u.display_name} to ${role}?`)) return;
+		if (!confirm(tf(role === 'admin' ? 'confirm_demote' : 'confirm_promote', { name: u.display_name }))) return;
 		if (await api(`/api/admin/users/${u.id}`, 'PUT', { role })) await load();
 	}
 
 	async function resetPassword(u: PublicUser) {
-		const password = prompt(`New password for ${u.display_name} (min 8 chars):`);
+		const password = prompt(tf('prompt_password', { name: u.display_name }));
 		if (!password) return;
 		if (await api(`/api/admin/users/${u.id}/password`, 'PUT', { password })) await load();
 	}
 
 	async function removeUser(u: PublicUser) {
-		if (!confirm(`Delete ${u.display_name}? Their cards will be removed too.`)) return;
+		if (!confirm(tf('confirm_delete', { name: u.display_name }))) return;
 		if (await api(`/api/admin/users/${u.id}`, 'DELETE')) await load();
 	}
 
 	function inviteStatus(i: InviteRow): string {
-		return i.used_at ? 'used' : i.expired ? 'expired' : 'active';
+		return i.used_at ? t('status_used') : i.expired ? t('status_expired') : t('status_active');
 	}
 </script>
 
 {#if !$session.user}
-	<p><a href="/login">Sign in</a> first.</p>
+	<p><a href="/login">{t('sign_in_first')}</a></p>
 {:else if !isAdmin}
-	<p>Admin only.</p>
+	<p>{t('admin_only')}</p>
 {:else}
-	<h1>Admin</h1>
+	<h1>{t('admin')}</h1>
 
 	{#if errorMsg}<p class="error">{errorMsg}</p>{/if}
 
-	<h2>Invite people</h2>
-	<button onclick={createInvite}>Create invite link</button>
+	<h2>{t('invite_people')}</h2>
+	<button onclick={createInvite}>{t('create_invite')}</button>
 	{#if newInviteUrl}
-		<p class="invite">Share this one-time link (valid 7 days):<br />
+		<p class="invite">{t('invite_share')}<br />
 			<code>{newInviteUrl}</code></p>
 	{/if}
 	<ul class="invites">
-		{#if invites.length === 0}<li class="meta">No invite links yet.</li>{/if}
+		{#if invites.length === 0}<li class="meta">{t('no_invites')}</li>{/if}
 		{#each invites as i (i.id)}
 			<li>
-				<span class="status {inviteStatus(i)}">{inviteStatus(i)}</span>
-				<span class="meta">expires {i.expires_at.slice(0, 10)}</span>
-				{#if !i.used_at && !i.expired}<button onclick={() => revoke(i.id)}>Revoke</button>{/if}
+				<span class="status {i.used_at ? 'used' : i.expired ? 'expired' : 'active'}">{inviteStatus(i)}</span>
+				<span class="meta">{tf('expires', { date: i.expires_at.slice(0, 10) })}</span>
+				{#if !i.used_at && !i.expired}<button onclick={() => revoke(i.id)}>{t('revoke')}</button>{/if}
 			</li>
 		{/each}
 	</ul>
 
-	<h2>People</h2>
+	<h2>{t('people')}</h2>
 	<table>
 		<thead>
-			<tr><th>Name</th><th>Username</th><th>Role</th><th></th></tr>
+			<tr><th>{t('name')}</th><th>{t('username')}</th><th>{t('role')}</th><th></th></tr>
 		</thead>
 		<tbody>
 			{#each users as u (u.id)}
 				<tr>
 					<td>{u.display_name}</td>
 					<td>{u.username}</td>
-					<td>{u.role}</td>
+					<td>{u.role === 'admin' ? t('role_admin') : t('role_user')}</td>
 					<td class="actions">
-						<button onclick={() => toggleRole(u)}>{u.role === 'admin' ? 'demote' : 'promote'}</button>
-						<button onclick={() => resetPassword(u)}>reset password</button>
+						<button onclick={() => toggleRole(u)}>{u.role === 'admin' ? t('demote') : t('promote')}</button>
+						<button onclick={() => resetPassword(u)}>{t('reset_password')}</button>
 						{#if u.id !== $session.user?.id}
-							<button class="danger" onclick={() => removeUser(u)}>delete</button>
+							<button class="danger" onclick={() => removeUser(u)}>{t('delete')}</button>
 						{/if}
 					</td>
 				</tr>

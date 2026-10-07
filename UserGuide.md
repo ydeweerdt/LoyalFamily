@@ -38,6 +38,7 @@ Before using this beyond a quick trial, **change `COOKIE_SECRET`** in
 | Import from another LoyalFamily instance | **Settings → Export** on the old instance, then **Settings → Import** here |
 | Back up | **Settings → Export my cards (JSON)** — the canonical `loyalfamily-json-v1` format, re-importable |
 | Install as an app | Browser → “Install app” / “Add to Home Screen” (Android Chrome/Firefox, iOS Safari ≥ 16.4, desktop Chrome/Firefox/Edge). Works offline once installed |
+| Language | Auto-detected from the phone/browser (English or Dutch); override in **Settings → Language** (Auto / Nederlands / English) |
 | Health check | `GET /api/health` → `{"ok":true}` |
 
 Offline behaviour: the app keeps working with your cached cards; changes are

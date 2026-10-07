@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Scanner from '$lib/components/Scanner.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import { t } from '$lib/i18n.svelte';
 	import { validEan13Checksum } from '$lib/domain/validation';
 	import { SYMBOLOGIES } from '$lib/types';
 
@@ -43,7 +44,7 @@
 		try {
 			await onsave(values);
 		} catch (err) {
-			errorMsg = err instanceof Error ? err.message : 'Save failed';
+			errorMsg = err instanceof Error ? err.message : t('save_failed');
 		}
 		busy = false;
 	}
@@ -51,27 +52,27 @@
 
 <form onsubmit={submit}>
 	<label>
-		Name
+		{t('name')}
 		<input name="name" bind:value={values.name} maxlength={64} required />
 	</label>
 	<label>
-		Color
+		{t('color')}
 		<input name="color" type="color" bind:value={values.color} />
 	</label>
 	<label>
-		Barcode value
+		{t('barcode_value')}
 		<div class="barrow">
 			<input name="barcode_value" bind:value={values.barcode_value} maxlength={512} required />
-			<button type="button" class="scan" aria-label="Scan barcode" title="Scan barcode" onclick={() => (scanning = true)}>
+			<button type="button" class="scan" aria-label={t('scan_barcode')} title={t('scan_barcode')} onclick={() => (scanning = true)}>
 				<Icon name="scan" />
 			</button>
 		</div>
 	</label>
 	{#if ean13Bad}
-		<p class="warn">⚠ This 13-digit value has an invalid EAN-13 check digit — it may be misread.</p>
+		<p class="warn">{t('ean13_warn')}</p>
 	{/if}
 	<label>
-		Symbology
+		{t('symbology')}
 		<select name="symbology" bind:value={values.symbology}>
 			{#each SYMBOLOGIES as s}
 				<option value={s}>{s}</option>
@@ -81,15 +82,15 @@
 	<label class="check">
 		<input name="visibility" type="checkbox" checked={values.visibility === 'shared'}
 			onchange={(e) => (values.visibility = (e.currentTarget as HTMLInputElement).checked ? 'shared' : 'private')} />
-		Shared with the family (unchecked = private)
+			{t('shared_hint')}
 	</label>
 	<label>
-		Comment (optional — distinguishes multiple cards of the same brand)
+		{t('comment_hint')}
 		<input name="comment" bind:value={values.comment} maxlength={200} />
 	</label>
 	<div class="row">
 		<button disabled={busy}>{submitLabel}</button>
-		<button type="button" class="icon-btn" aria-label="Cancel" title="Cancel" onclick={oncancel}>
+		<button type="button" class="icon-btn" aria-label={t('cancel')} title={t('cancel')} onclick={oncancel}>
 			<Icon name="back" />
 		</button>
 	</div>
