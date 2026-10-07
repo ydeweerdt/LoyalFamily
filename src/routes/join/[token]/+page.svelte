@@ -42,9 +42,9 @@
 		join();
 	}}
 >
-	<label>{t('username')} <input name="username" bind:value={username} required minlength={3} maxlength={32} pattern="[a-z0-9_.]+" /></label>
-	<label>{t('display_name')} <input name="display_name" bind:value={displayName} required maxlength={64} /></label>
-	<label>{t('password')} <input name="password" type="password" bind:value={password} required minlength={8} /></label>
+	<label>{t('username')} <input name="username" bind:value={username} required minlength={3} maxlength={32} pattern="[a-z0-9_.]+" autocomplete="username" /></label>
+	<label>{t('display_name')} <input name="display_name" bind:value={displayName} required maxlength={64} autocomplete="name" /></label>
+	<label>{t('password')} <input name="password" type="password" bind:value={password} required minlength={8} autocomplete="new-password" /></label>
 	<button disabled={busy}>{t('join')}</button>
 </form>
 

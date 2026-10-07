@@ -112,8 +112,8 @@
 			change();
 		}}
 	>
-		<label>{t('current_password')} <input type="password" bind:value={current} required /></label>
-		<label>{t('new_password')} <input type="password" bind:value={next} required minlength={8} /></label>
+		<label>{t('current_password')} <input name="current_password" type="password" bind:value={current} required autocomplete="current-password" /></label>
+		<label>{t('new_password')} <input name="new_password" type="password" bind:value={next} required minlength={8} autocomplete="new-password" /></label>
 		<button>{t('change_password')}</button>
 	</form>
 	{#if msg}<p class={isError ? 'error' : 'ok'}>{msg}</p>{/if}

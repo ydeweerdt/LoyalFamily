@@ -105,7 +105,7 @@
 		<p>{t('no_cards')}</p>
 	{:else}
 		{#if $tiles.length > 3}
-			<input class="search" type="search" placeholder={t('search_cards')} bind:value={query} />
+			<input class="search" type="search" placeholder={t('search_cards')} bind:value={query} autocomplete="off" />
 		{/if}
 		{#if shownTiles.length === 0}
 			<p>{t('no_match')} “{query}”.</p>

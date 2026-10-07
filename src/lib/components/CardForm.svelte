@@ -50,10 +50,10 @@
 	}
 </script>
 
-<form onsubmit={submit}>
+<form onsubmit={submit} autocomplete="off">
 	<label>
 		{t('name')}
-		<input name="name" bind:value={values.name} maxlength={64} required />
+		<input name="name" bind:value={values.name} maxlength={64} required autocomplete="off" data-1p-ignore />
 	</label>
 	<label>
 		{t('color')}
@@ -62,7 +62,18 @@
 	<label>
 		{t('barcode_value')}
 		<div class="barrow">
-			<input name="barcode_value" bind:value={values.barcode_value} maxlength={512} required />
+			<input
+				name="barcode_value"
+				bind:value={values.barcode_value}
+				maxlength={512}
+				required
+				autocomplete="off"
+				inputmode="numeric"
+				autocorrect="off"
+				autocapitalize="off"
+				spellcheck={false}
+				data-1p-ignore
+			/>
 			<button type="button" class="scan" aria-label={t('scan_barcode')} title={t('scan_barcode')} onclick={() => (scanning = true)}>
 				<Icon name="scan" />
 			</button>
@@ -86,7 +97,7 @@
 	</label>
 	<label>
 		{t('comment_hint')}
-		<input name="comment" bind:value={values.comment} maxlength={200} />
+		<input name="comment" bind:value={values.comment} maxlength={200} autocomplete="off" data-1p-ignore />
 	</label>
 	<div class="row">
 		<button disabled={busy}>{submitLabel}</button>

@@ -64,3 +64,15 @@ test('invalid EAN-13 check digit is flagged before saving', async ({ page }) => 
 	await page.selectOption('select[name="symbology"]', 'EAN_13');
 	await expect(page.getByText('invalid EAN-13 check digit')).toBeVisible();
 });
+
+test('card form fields are off-limits to password managers', async ({ page }) => {
+	await login(page, 'papa', 'pass12345');
+	await page.getByTitle('Add card').click();
+	await page.getByPlaceholder('Search brand or store…').fill('carrefour');
+	await page.getByRole('button', { name: 'Carrefour', exact: false }).click();
+	await page.getByRole('button', { name: 'Manual' }).click();
+	const barcode = page.locator('input[name="barcode_value"]');
+	await expect(barcode).toHaveAttribute('data-1p-ignore');
+	await expect(barcode).toHaveAttribute('autocomplete', 'off');
+	await expect(barcode).toHaveAttribute('inputmode', 'numeric');
+});

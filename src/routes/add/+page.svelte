@@ -64,7 +64,7 @@
 	<p><a href="/login">{t('sign_in_to_add')}</a></p>
 {:else if picked === null}
 	<h1>{t('add_card')}</h1>
-	<input class="search" type="search" placeholder={t('search_brand')} bind:value={query} />
+	<input class="search" type="search" placeholder={t('search_brand')} bind:value={query} autocomplete="off" />
 	{#if brands.length === 0}
 		<p>{t('no_brand_match')}</p>
 	{/if}
