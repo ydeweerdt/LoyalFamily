@@ -13,9 +13,15 @@ import type { Card } from '$lib/types';
 
 export const cards = writable<Card[]>([]);
 export const offline = writable(false);
+/** number of mutations still queued for the server (shown in the offline banner) */
+export const pending = writable(0);
 export const tiles = derived([cards, session], ([$cards, $session]) =>
 	$session.user ? buildTiles($cards, $session.user) : []
 );
+
+async function refreshPending(): Promise<void> {
+	pending.set((await getQueuedOps()).length);
+}
 
 let syncing = false;
 
@@ -67,6 +73,7 @@ export async function syncNow(): Promise<void> {
 			cards.set(await getCachedCards());
 		}
 		if (res.queued > 0) offline.set(true);
+		await refreshPending();
 	} finally {
 		syncing = false;
 	}
@@ -76,6 +83,7 @@ async function mutate(op: QueuedOp, optimistic: (list: Card[]) => Card[]): Promi
 	await enqueueOp(op);
 	cards.update(optimistic);
 	const res = await flushQueue(queueStore, { send: sendOp });
+	await refreshPending();
 	if (res.queued > 0) {
 		offline.set(true); // stayed queued — local optimistic state stands
 		return { ok: true };

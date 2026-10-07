@@ -53,3 +53,15 @@ export function buildTiles(cards: Card[], user: PublicUser): Tile[] {
 	// automatic alphabetical ordering (Decided #7)
 	return tiles.sort((a, b) => a.name.localeCompare(b.name));
 }
+
+/**
+ * Home-grid search filter: matches tile/brand name or any card comment
+ * (e.g. typing "family" finds the shared family Delhaize card).
+ */
+export function filterTiles(tiles: Tile[], query: string): Tile[] {
+	const q = query.trim().toLowerCase();
+	if (!q) return tiles;
+	return tiles.filter(
+		(t) => t.name.toLowerCase().includes(q) || t.cards.some((c) => (c.comment ?? '').toLowerCase().includes(q))
+	);
+}

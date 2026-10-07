@@ -49,6 +49,9 @@
 {:else if picked === null}
 	<h1>Add card</h1>
 	<input class="search" type="search" placeholder="Search brand or store…" bind:value={query} />
+	{#if brands.length === 0}
+		<p>No catalog brand matches “{query}” — use <b>Unknown</b> below for a free-text card.</p>
+	{/if}
 	<div class="grid">
 		{#each brands as brand (brand.id)}
 			<button class="tile" style="background:{brand.color}" onclick={() => (picked = brand)}>

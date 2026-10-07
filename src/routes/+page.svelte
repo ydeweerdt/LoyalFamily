@@ -3,8 +3,8 @@
 	import CardForm, { type CardFormValues } from '$lib/components/CardForm.svelte';
 	import BarcodeView from '$lib/components/BarcodeView.svelte';
 	import { getBrand, monogram } from '$lib/brands';
-	import type { Tile } from '$lib/domain/cards';
-	import { cards, loadCards, offline, patchCard, removeCard, tiles } from '$lib/stores/cards';
+	import { filterTiles, type Tile } from '$lib/domain/cards';
+	import { cards, loadCards, offline, pending, patchCard, removeCard, tiles } from '$lib/stores/cards';
 	import { refreshSession, session } from '$lib/stores/session';
 	import type { Card } from '$lib/types';
 
@@ -12,6 +12,8 @@
 	let editCard = $state<Card | null>(null);
 	let barcodeCard = $state<Card | null>(null);
 	let errorMsg = $state('');
+	let query = $state('');
+	const shownTiles = $derived(filterTiles($tiles, query));
 
 	onMount(async () => {
 		await refreshSession();
@@ -36,6 +38,29 @@
 	function canEditCard(card: Card): boolean {
 		return card.owner_id === $session.user?.id;
 	}
+
+	/* Tap semantics (REQUIREMENTS §5): single-card tile → barcode immediately;
+	   multi-card tile → card list. Hold (long-press) → manage list even for one card. */
+	let holdTimer: ReturnType<typeof setTimeout> | undefined;
+	let holdFired = false;
+
+	function startHold(tile: Tile) {
+		clearTimeout(holdTimer);
+		holdFired = false;
+		holdTimer = setTimeout(() => {
+			holdFired = true;
+			openTile = tile;
+		}, 500);
+	}
+	function cancelHold() {
+		clearTimeout(holdTimer);
+	}
+	function tap(tile: Tile) {
+		cancelHold();
+		if (holdFired) return void (holdFired = false);
+		if (tile.cards.length === 1) barcodeCard = tile.cards[0];
+		else openTile = tile;
+	}
 </script>
 
 {#if $session.user}
@@ -47,15 +72,32 @@
 	{#if errorMsg}<p class="error">{errorMsg}</p>{/if}
 
 	{#if $offline}
-		<p class="offline">⚠ Offline — showing saved cards. Changes will sync when you reconnect.</p>
+		<p class="offline">
+			⚠ Offline — showing saved cards.{$pending > 0 ? ` ${$pending} change${$pending > 1 ? 's' : ''} waiting to sync.` : ''}
+		</p>
 	{/if}
 
 	{#if $tiles.length === 0}
 		<p>No cards yet — tap <b>＋</b> to add your first loyalty card.</p>
 	{:else}
+		{#if $tiles.length > 3}
+			<input class="search" type="search" placeholder="Search cards…" bind:value={query} />
+		{/if}
+		{#if shownTiles.length === 0}
+			<p>No cards match “{query}”.</p>
+		{:else}
 		<div class="grid">
-			{#each $tiles as tile (tile.key)}
-				<button class="tile" style="background:{tile.color}" onclick={() => (openTile = tile)}>
+			{#each shownTiles as tile (tile.key)}
+				<button
+					class="tile"
+					style="background:{tile.color}"
+					title={tile.cards.length === 1 ? 'Tap for barcode · hold to manage' : 'Tap to manage'}
+					onclick={() => tap(tile)}
+					onpointerdown={() => startHold(tile)}
+					onpointerup={cancelHold}
+					onpointercancel={cancelHold}
+					onpointerleave={cancelHold}
+				>
 					<span class="mono">{monogram(tile.name)}</span>
 					<span class="label">{tile.name}</span>
 					{#if tile.count > 1}<span class="badge count">{tile.count}</span>{/if}
@@ -63,6 +105,7 @@
 				</button>
 			{/each}
 		</div>
+		{/if}
 	{/if}
 
 	{#if openTile && !editCard}
@@ -149,6 +192,12 @@
 		display: grid;
 		grid-template-columns: repeat(3, 1fr);
 		gap: 0.6rem;
+	}
+	.search {
+		width: 100%;
+		padding: 0.5rem;
+		box-sizing: border-box;
+		margin-bottom: 0.75rem;
 	}
 	.tile {
 		position: relative;

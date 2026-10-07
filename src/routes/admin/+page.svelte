@@ -95,6 +95,7 @@
 			<code>{newInviteUrl}</code></p>
 	{/if}
 	<ul class="invites">
+		{#if invites.length === 0}<li class="meta">No invite links yet.</li>{/if}
 		{#each invites as i (i.id)}
 			<li>
 				<span class="status {inviteStatus(i)}">{inviteStatus(i)}</span>

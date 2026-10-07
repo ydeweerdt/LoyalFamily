@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { monogram, searchBrands, BRANDS } from '$lib/brands';
-import { buildTiles, tileKey } from '$lib/domain/cards';
+import { buildTiles, filterTiles, tileKey } from '$lib/domain/cards';
 import type { Card, PublicUser } from '$lib/types';
 
 const alice: PublicUser = { id: 'alice', username: 'alice', display_name: 'Alice', role: 'user' };
@@ -85,5 +85,32 @@ describe('grid tiles (REQUIREMENTS §2)', () => {
 	it('tileKey distinguishes brands from custom cards', () => {
 		expect(tileKey(card())).toBe('b:delhaize');
 		expect(tileKey(card({ brand_id: null, name: 'X' }))).toBe('c:x');
+	});
+});
+
+describe('filterTiles (home search)', () => {
+	const tiles = buildTiles(
+		[
+			card({ comment: 'family card' }),
+			card({ brand_id: 'colruyt', name: 'Colruyt / Bonus', comment: null }),
+			card({ brand_id: null, name: 'Bakker Bart', comment: 'sourdough' })
+		],
+		alice
+	);
+
+	it('empty query returns everything', () => {
+		expect(filterTiles(tiles, '')).toHaveLength(3);
+		expect(filterTiles(tiles, '   ')).toHaveLength(3);
+	});
+	it('matches brand name case-insensitively', () => {
+		expect(filterTiles(tiles, 'del').map((t) => t.name)).toEqual(['Delhaize']);
+		expect(filterTiles(tiles, 'COLRUyt')).toHaveLength(1);
+	});
+	it('matches card comments too (find "family" cards)', () => {
+		expect(filterTiles(tiles, 'family').map((t) => t.name)).toEqual(['Delhaize']);
+		expect(filterTiles(tiles, 'sour').map((t) => t.name)).toEqual(['Bakker Bart']);
+	});
+	it('no match returns empty (page shows empty state)', () => {
+		expect(filterTiles(tiles, 'zzz')).toHaveLength(0);
 	});
 });
