@@ -41,9 +41,9 @@
 		join();
 	}}
 >
-	<label>Username <input bind:value={username} required minlength={3} maxlength={32} pattern="[a-z0-9_.]+" /></label>
-	<label>Display name <input bind:value={displayName} required maxlength={64} /></label>
-	<label>Password <input type="password" bind:value={password} required minlength={8} /></label>
+	<label>Username <input name="username" bind:value={username} required minlength={3} maxlength={32} pattern="[a-z0-9_.]+" /></label>
+	<label>Display name <input name="display_name" bind:value={displayName} required maxlength={64} /></label>
+	<label>Password <input name="password" type="password" bind:value={password} required minlength={8} /></label>
 	<button disabled={busy}>Join</button>
 </form>
 

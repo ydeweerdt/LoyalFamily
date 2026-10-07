@@ -214,3 +214,9 @@ rollback decisions easy.
 7. ✅ Invites + admin UI
 8. ✅ LoyalFamily JSON import + export + **parser fixture tests**
 9. ✅ Polish: badges, search, wake lock/fullscreen barcode view, empty states
+10. ✅ Playwright e2e golden flows (`make e2e`, tests/e2e/01–04): first-admin +
+    invite/join, add-card + barcode view, offline → reconnect sync, shared vs
+    private across users — found and fixed two real offline bugs: the session
+    was unknown offline (now hydrated from a display-only localStorage mirror)
+    and optimistic mutations weren't persisted to the IndexedDB mirror (a
+    remount while offline lost them from the local UI)

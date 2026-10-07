@@ -14,5 +14,8 @@ jobs:
       - name: unit + integration tests
         run: docker build --target test -t loyalfamily-test .
 
+      - name: e2e golden flows (Playwright)
+        run: docker build --target e2e-run -t loyalfamily-e2e .
+
       - name: runtime image
         run: docker build -t loyalfamily:latest .

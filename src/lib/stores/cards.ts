@@ -82,6 +82,9 @@ export async function syncNow(): Promise<void> {
 async function mutate(op: QueuedOp, optimistic: (list: Card[]) => Card[]): Promise<{ ok: boolean; error?: string }> {
 	await enqueueOp(op);
 	cards.update(optimistic);
+	// persist the optimistic state to the IDB mirror too: otherwise a remount
+	// while offline re-reads stale cache and the local UI loses the change
+	void cacheCards(get(cards));
 	const res = await flushQueue(queueStore, { send: sendOp });
 	await refreshPending();
 	if (res.queued > 0) {

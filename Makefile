@@ -8,7 +8,7 @@ test:
 	docker build --target test -t loyalfamily-test .
 
 e2e:
-	@echo "e2e (Playwright golden flows) — not wired up yet; see DESIGN §8"
+	docker build --target e2e-run -t loyalfamily-e2e .
 
 build:
 	docker build -t loyalfamily:latest .

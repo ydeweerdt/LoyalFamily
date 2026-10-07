@@ -9,6 +9,7 @@ no native build tools. Local commands and CI run the *same* container targets.
 
 ```bash
 make test     # typecheck + lint + unit + integration tests (Docker target `test`)
+make e2e      # Playwright golden flows against the built production app
 make dev      # Vite dev server with hot reload at http://localhost:5173
 make build    # build the production runtime image (loyalfamily:latest)
 make run      # build + docker compose up (production shape, http://localhost:3000)
@@ -99,6 +100,40 @@ GitHub Actions (`.github/workflows/ci.yml`) runs exactly the same two builds
 you run locally: `docker build --target test` and the runtime image build.
 There is no separate CI toolchain to keep in sync.
 
+### E2E golden flows (`make e2e`)
+
+Playwright drives the **built production app** (adapter-node server on a
+throwaway DB) through the four golden flows from DESIGN §8:
+
+```
+tests/e2e/01-setup.spec.ts    empty server → first admin → invite → join → single-use link
+          02-card.spec.ts     brand picker → manual entry → tile → full-screen barcode
+          03-offline.spec.ts  offline add → queued → reconnect → server truth
+          04-sharing.spec.ts  shared vs private across two users (UI + API + 403)
+```
+
+Notes for writing e2e specs here:
+
+- The specs tell **one continuous story** on one fresh server (`workers: 1`,
+  serial). Running a single later spec alone fails by design — the user it
+  logs in as is created in `01`.
+- The webServer in `playwright.config.ts` wipes `/tmp/loyalfamily-e2e-data` on
+  start, so every `make e2e` begins with an empty database.
+- No camera in headless: card entry is manual (the scanner path is covered
+  by unit tests + real devices).
+- Fast iteration without a full rebuild — mount just the specs onto the
+  prebuilt base stage (run `make e2e` once first to build it):
+  ```bash
+  docker build --target e2e -t loyalfamily-e2e-base .
+  docker run --rm -v "$PWD/tests/e2e:/app/tests/e2e" \
+    -v "$PWD/playwright.config.ts:/app/playwright.config.ts" \
+    loyalfamily-e2e-base npx playwright test
+  ```
+  (rebuild `e2e-base` whenever **app** code changes; the mounted specs are
+  always current)
+- The Playwright Docker image tag (`mcr.microsoft.com/playwright:vX-noble`)
+  must match the pinned `@playwright/test` version in `package.json`.
+
 ## 5. Dependencies & the lockfile
 
 - `make lock` regenerates `package-lock.json` with
@@ -163,6 +198,7 @@ queue/transport — extend `tests/unit/sync.test.ts` and
 | `build` | `svelte-kit sync && vite build` (adapter-node output in `build/`) |
 | `test` | `npm run check` + `vitest run` — this is `make test` |
 | `prod-deps` | `npm ci --omit=dev --legacy-peer-deps` (~26 MB) |
+| `e2e` / `e2e-run` | Playwright image + built app + golden flows (`make e2e`) |
 | `runtime` | final image: prod deps + build output, non-root, `PORT=8080`, `DATA_DIR=/data`, healthcheck |
 
 Debug a running production container:
@@ -173,8 +209,6 @@ docker exec -it <name> node -e "const db=require('better-sqlite3')('/data/loyalf
 
 ## 9. Known gaps / next steps
 
-- Playwright e2e golden flows (DESIGN §8) are not wired up yet (`make e2e`
-  is a placeholder).
 - Real-device testing on Android Chrome / iOS Safari (wake lock, fullscreen,
   scanner fallback degradations) is still manual.
 - Brand logos are monograms; real SVG logos are a v2 polish item.

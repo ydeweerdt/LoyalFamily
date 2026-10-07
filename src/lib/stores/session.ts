@@ -12,16 +12,45 @@ export const session = writable<{ user: SessionUser | null; loaded: boolean }>({
 	loaded: false
 });
 
+/**
+ * Display-only session mirror. The auth cookie stays HttpOnly; this exists so
+ * the app shell still knows *who you are* when offline (the /api/me probe
+ * fails, but the cards are in IndexedDB and the nav should not flip to
+ * "Sign in"). Server-side auth still enforces everything on reconnect.
+ */
+const LS_KEY = 'loyalfamily.session';
+
+function readLocal(): SessionUser | null {
+	try {
+		const raw = localStorage.getItem(LS_KEY);
+		return raw ? (JSON.parse(raw) as SessionUser) : null;
+	} catch {
+		return null;
+	}
+}
+
 export async function refreshSession(): Promise<void> {
 	try {
 		const r = await fetch('/api/me', { credentials: 'same-origin' });
-		session.set({ user: r.ok ? await r.json() : null, loaded: true });
+		if (r.ok) {
+			const user = (await r.json()) as SessionUser;
+			localStorage.setItem(LS_KEY, JSON.stringify(user));
+			session.set({ user, loaded: true });
+		} else {
+			localStorage.removeItem(LS_KEY);
+			session.set({ user: null, loaded: true });
+		}
 	} catch {
-		session.set({ user: null, loaded: true });
+		// offline: keep the last known session for the UI
+		session.set({ user: readLocal(), loaded: true });
 	}
 }
 
 export async function logout(): Promise<void> {
-	await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
-	await refreshSession();
+	try {
+		await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+	} finally {
+		localStorage.removeItem(LS_KEY);
+		await refreshSession();
+	}
 }
