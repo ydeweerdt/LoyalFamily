@@ -41,7 +41,7 @@ function png(width, height, rgb) {
 		rgb.copy(raw, off + 1, y * width * 3, (y + 1) * width * 3);
 	}
 	return Buffer.concat([
-		Buffer.from([137, 80, 71, 71, 13, 10, 26, 10]), // full 8-byte PNG signature
+		Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), // PNG signature \x89PNG\r\n\x1a\n — numeric bytes, NOT a UTF-8 string
 		chunk('IHDR', ihdr),
 		chunk('IDAT', zlib.deflateSync(raw, { level: 9 })),
 		chunk('IEND', Buffer.alloc(0))

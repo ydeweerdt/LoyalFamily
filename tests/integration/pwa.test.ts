@@ -24,7 +24,7 @@ describe('PWA artifacts', () => {
 			['static/icons/icon-512.png', 512]
 		] as const) {
 			const buf = fs.readFileSync(file);
-			expect(buf.subarray(0, 8)).toEqual(Buffer.from([137, 80, 71, 71, 13, 10, 26, 10]));
+			expect(buf.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
 			const w = buf.readUInt32BE(16);
 			const h = buf.readUInt32BE(20);
 			expect([w, h]).toEqual([size, size]);
@@ -50,7 +50,7 @@ describe('PWA artifacts', () => {
 		expect(buf.readUInt16LE(4)).toBe(1); // one image
 		expect(buf[6]).toBe(32); // width
 		expect(buf[7]).toBe(32); // height
-		expect(buf.subarray(22, 30)).toEqual(Buffer.from([137, 80, 71, 71, 13, 10, 26, 10])); // PNG signature
+		expect(buf.subarray(22, 30)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])); // PNG signature
 	});
 });
 
