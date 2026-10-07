@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Scanner from '$lib/components/Scanner.svelte';
+	import Icon from '$lib/components/Icon.svelte';
 	import { validEan13Checksum } from '$lib/domain/validation';
 	import { SYMBOLOGIES } from '$lib/types';
 
@@ -61,7 +62,9 @@
 		Barcode value
 		<div class="barrow">
 			<input name="barcode_value" bind:value={values.barcode_value} maxlength={512} required />
-			<button type="button" class="scan" onclick={() => (scanning = true)}>Scan</button>
+			<button type="button" class="scan" aria-label="Scan barcode" title="Scan barcode" onclick={() => (scanning = true)}>
+				<Icon name="scan" />
+			</button>
 		</div>
 	</label>
 	{#if ean13Bad}
@@ -86,7 +89,9 @@
 	</label>
 	<div class="row">
 		<button disabled={busy}>{submitLabel}</button>
-		<button type="button" class="secondary" onclick={oncancel}>Cancel</button>
+		<button type="button" class="icon-btn" aria-label="Cancel" title="Cancel" onclick={oncancel}>
+			<Icon name="back" />
+		</button>
 	</div>
 	{#if errorMsg}<p class="error">{errorMsg}</p>{/if}
 	{#if scanning}
@@ -132,6 +137,18 @@
 	}
 	.secondary {
 		background: #e9ecef;
+	}
+	.icon-btn {
+		background: #e9ecef;
+		border: none;
+		border-radius: 8px;
+		width: 2.2rem;
+		height: 2.2rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		color: #212529;
 	}
 	.barrow {
 		display: flex;

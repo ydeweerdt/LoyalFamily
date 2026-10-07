@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import CardForm, { type CardFormValues } from '$lib/components/CardForm.svelte';
 	import BarcodeView from '$lib/components/BarcodeView.svelte';
+	import Icon from '$lib/components/Icon.svelte';
 	import { getBrand, monogram } from '$lib/brands';
 	import { filterTiles, type Tile } from '$lib/domain/cards';
 	import { cards, loadCards, offline, pending, patchCard, removeCard, tiles } from '$lib/stores/cards';
@@ -152,7 +153,9 @@
 						</button>
 					{/each}
 				</div>
-				<button class="secondary" onclick={() => (openTile = null)}>Close</button>
+				<button class="icon-btn" aria-label="Close" title="Close" onclick={() => (openTile = null)}>
+					<Icon name="back" />
+				</button>
 			</div>
 		</div>
 	{/if}
@@ -164,7 +167,7 @@
 	{#if editCard}
 		<div class="modal" role="dialog" aria-label="Edit card">
 			<div class="modal-body">
-				<h2>Edit card</h2>
+				<h2><Icon name="pencil" size={18} /> Edit card</h2>
 				<CardForm
 					initial={{
 						name: editCard.name,
@@ -180,7 +183,9 @@
 					oncancel={() => (editCard = null)}
 				/>
 				{#if canManage(editCard)}
-					<button class="danger" onclick={() => editCard && remove(editCard)}>Delete card</button>
+					<button class="icon-btn danger" aria-label="Delete card" title="Delete card" onclick={() => editCard && remove(editCard)}>
+						<Icon name="trash" />
+					</button>
 				{/if}
 			</div>
 		</div>
@@ -285,6 +290,22 @@
 		color: #666;
 	}
 	.danger {
+		background: #c92a2a;
+		color: white;
+	}
+	.icon-btn {
+		background: #e9ecef;
+		border: none;
+		border-radius: 8px;
+		width: 2.2rem;
+		height: 2.2rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		color: #212529;
+	}
+	.icon-btn.danger {
 		background: #c92a2a;
 		color: white;
 	}
