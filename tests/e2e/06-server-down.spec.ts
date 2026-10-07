@@ -34,7 +34,7 @@ test('server down (refused + 502) → app shell + logged-in state served from th
 	await page.fill('input[name="display_name"]', 'Offline Papa');
 	await page.fill('input[name="password"]', 'pass12345');
 	await page.getByRole('button', { name: 'Register as first admin' }).click();
-	await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Menu' })).toBeVisible();
 
 	await page.evaluate(() => navigator.serviceWorker.ready);
 	await page.reload(); // ensure the SW controls this page
@@ -48,7 +48,9 @@ test('server down (refused + 502) → app shell + logged-in state served from th
 	await expect(page.locator('nav')).toBeVisible();
 	// NOT the login screen: the session mirror keeps us "signed in" offline
 	await expect(page.getByRole('link', { name: 'Sign in' })).toBeHidden();
+	await page.getByRole('button', { name: 'Menu' }).click();
 	await expect(page.getByText('Offline Papa')).toBeVisible();
+	await page.keyboard.press('Escape');
 
 	// case 2: proxy up but backend down → 502 Bad Gateway
 	const fake = startServer([
@@ -59,6 +61,7 @@ test('server down (refused + 502) → app shell + logged-in state served from th
 	await page.goto(URL + '/');
 	await expect(page.getByRole('heading', { name: 'Cards' })).toBeVisible();
 	await expect(page.getByText('Bad Gateway')).toBeHidden();
+	await page.getByRole('button', { name: 'Menu' }).click();
 	await expect(page.getByText('Offline Papa')).toBeVisible();
 
 	fake.kill();

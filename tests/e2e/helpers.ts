@@ -1,11 +1,15 @@
 import { expect, type Page } from '@playwright/test';
 
+export async function openMenu(page: Page): Promise<void> {
+	await page.getByRole('button', { name: 'Menu' }).click();
+}
+
 export async function login(page: Page, username: string, password: string): Promise<void> {
 	await page.goto('/login');
 	await page.fill('input[name="username"]', username);
 	await page.fill('input[name="password"]', password);
 	await page.getByRole('button', { name: 'Sign in' }).click();
-	await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Menu' })).toBeVisible();
 }
 
 /** Add a card through the brand picker (manual entry — no camera in headless). */
