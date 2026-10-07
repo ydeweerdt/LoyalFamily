@@ -24,6 +24,36 @@ test('add a card via brand picker and see its barcode full-screen', async ({ pag
 	await expect(page.locator('.fullscreen')).toBeHidden();
 });
 
+test('stacked brand: tap opens tile view, tap tile shows barcode, hold opens edit', async ({ page }) => {
+	await login(page, 'papa', 'pass12345');
+	await addCard(page, 'delhaize', 'Delhaize', {
+		barcode_value: '987654321098765432',
+		symbology: 'CODE_128',
+		comment: 'papa second'
+	});
+
+	// Delhaize now has 2 cards → count badge
+	const tile = page.locator('.tile', { hasText: 'Delhaize' });
+	await expect(tile.locator('.badge.count')).toHaveText('2');
+
+	// tap → tile view of the stacked cards (not an edit dialog)
+	await tile.click();
+	const dialog = page.getByRole('dialog', { name: 'Delhaize' });
+	await expect(dialog).toBeVisible();
+	await expect(dialog.getByRole('heading', { name: 'Edit card' })).toBeHidden();
+	await expect(dialog.locator('.tile')).toHaveCount(2);
+
+	// tap an inner tile → barcode full-screen
+	await dialog.locator('.tile', { hasText: 'papa second' }).click();
+	await expect(page.locator('.fullscreen')).toBeVisible();
+	await page.keyboard.press('Escape');
+
+	// hold an inner tile → edit dialog
+	const inner = dialog.locator('.tile', { hasText: 'papa private' });
+	await inner.dispatchEvent('pointerdown');
+	await expect(page.getByRole('dialog', { name: 'Edit card' })).toBeVisible({ timeout: 2000 });
+});
+
 test('invalid EAN-13 check digit is flagged before saving', async ({ page }) => {
 	await login(page, 'papa', 'pass12345');
 	await page.getByTitle('Add card').click();

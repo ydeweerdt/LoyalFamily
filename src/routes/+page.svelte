@@ -30,6 +30,8 @@
 	async function remove(card: Card) {
 		if (!confirm(`Delete "${card.name}"${card.comment ? ` (${card.comment})` : ''}?`)) return;
 		await removeCard(card.id);
+		editCard = null;
+		openTile = null;
 	}
 
 	function canManage(card: Card): boolean {
@@ -40,26 +42,46 @@
 	}
 
 	/* Tap semantics (REQUIREMENTS §5): single-card tile → barcode immediately;
-	   multi-card tile → card list. Hold (long-press) → manage list even for one card. */
+	   multi-card tile → tile view of the stacked cards. Hold → edit (single
+	   card) or tile view (stacked). In the tile view: tap → barcode, hold → edit. */
 	let holdTimer: ReturnType<typeof setTimeout> | undefined;
 	let holdFired = false;
 
+	function cancelHold() {
+		clearTimeout(holdTimer);
+	}
 	function startHold(tile: Tile) {
 		clearTimeout(holdTimer);
 		holdFired = false;
 		holdTimer = setTimeout(() => {
 			holdFired = true;
-			openTile = tile;
+			if (tile.cards.length === 1 && canEditCard(tile.cards[0])) editCard = tile.cards[0];
+			else openTile = tile;
+			// swallow the click that a real long-press fires on release,
+			// then reset in case the tile unmounted and no click ever came
+			setTimeout(() => (holdFired = false), 400);
 		}, 500);
-	}
-	function cancelHold() {
-		clearTimeout(holdTimer);
 	}
 	function tap(tile: Tile) {
 		cancelHold();
 		if (holdFired) return void (holdFired = false);
 		if (tile.cards.length === 1) barcodeCard = tile.cards[0];
 		else openTile = tile;
+	}
+	function startHoldCard(card: Card) {
+		clearTimeout(holdTimer);
+		holdFired = false;
+		holdTimer = setTimeout(() => {
+			holdFired = true;
+			if (canEditCard(card)) editCard = card;
+			else barcodeCard = card;
+			setTimeout(() => (holdFired = false), 400);
+		}, 500);
+	}
+	function tapCard(card: Card) {
+		cancelHold();
+		if (holdFired) return void (holdFired = false);
+		barcodeCard = card;
 	}
 </script>
 
@@ -91,7 +113,7 @@
 				<button
 					class="tile"
 					style="background:{tile.color}"
-					title={tile.cards.length === 1 ? 'Tap for barcode · hold to manage' : 'Tap to manage'}
+					title={tile.cards.length === 1 ? 'Tap for barcode · hold to edit' : 'Tap to view cards · hold for cards'}
 					onclick={() => tap(tile)}
 					onpointerdown={() => startHold(tile)}
 					onpointerup={cancelHold}
@@ -112,28 +134,24 @@
 		<div class="modal" role="dialog" aria-label={openTile.name}>
 			<div class="modal-body">
 				<h2>{openTile.name}</h2>
-				<ul class="cards">
+				<div class="grid">
 					{#each openTile.cards as card (card.id)}
-						<li>
-							<div class="card-info">
-								<b>{card.comment || card.name}</b>
-								<span class="meta">
-									{card.symbology} · {card.visibility === 'shared' ? 'shared' : '🔒 private'}
-									{card.owner_id === $session.user?.id ? '' : ` · by ${card.owner_id.slice(0, 4)}`}
-								</span>
-							</div>
-							<div class="card-actions">
-								<button onclick={() => (barcodeCard = card)}>Barcode</button>
-								{#if canEditCard(card)}
-									<button onclick={() => (editCard = card)}>Edit</button>
-								{/if}
-								{#if canManage(card)}
-									<button class="danger" onclick={() => remove(card)}>Delete</button>
-								{/if}
-							</div>
-						</li>
+						<button
+							class="tile"
+							style="background:{card.color}"
+							title="Tap for barcode · hold to edit"
+							onclick={() => tapCard(card)}
+							onpointerdown={() => startHoldCard(card)}
+							onpointerup={cancelHold}
+							onpointercancel={cancelHold}
+							onpointerleave={cancelHold}
+						>
+							<span class="mono">{monogram(card.name)}</span>
+							<span class="label">{card.comment || card.name}</span>
+							{#if card.visibility === 'private' && card.owner_id === $session.user?.id}<span class="badge lock">🔒</span>{/if}
+						</button>
 					{/each}
-				</ul>
+				</div>
 				<button class="secondary" onclick={() => (openTile = null)}>Close</button>
 			</div>
 		</div>
@@ -161,6 +179,9 @@
 					onsave={saveEdit}
 					oncancel={() => (editCard = null)}
 				/>
+				{#if canManage(editCard)}
+					<button class="danger" onclick={() => editCard && remove(editCard)}>Delete card</button>
+				{/if}
 			</div>
 		</div>
 	{/if}
@@ -257,18 +278,6 @@
 		max-width: 420px;
 		max-height: 85vh;
 		overflow: auto;
-	}
-	.cards {
-		list-style: none;
-		padding: 0;
-	}
-	.cards li {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem 0;
-		border-bottom: 1px solid #eee;
 	}
 	.meta {
 		display: block;
