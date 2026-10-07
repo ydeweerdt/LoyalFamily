@@ -47,12 +47,17 @@
 
 <style>
 	nav {
+		position: sticky;
+		top: 0;
+		z-index: 100;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 		padding: 0.6rem 1rem;
 		background: #0b7285;
 		color: white;
+		border: none;
+		box-shadow: none;
 	}
 	nav a.brand {
 		color: white;
