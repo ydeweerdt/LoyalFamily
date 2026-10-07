@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import CardForm, { type CardFormValues } from '$lib/components/CardForm.svelte';
+	import Scanner from '$lib/components/Scanner.svelte';
 	import { monogram, searchBrands, type Brand } from '$lib/brands';
 	import { addCard } from '$lib/stores/cards';
 	import { uuid } from '$lib/domain/uuid';
@@ -9,29 +10,42 @@
 
 	let query = $state('');
 	let picked = $state<Brand | 'unknown' | null>(null);
+	let scanning = $state(false);
+	let scanned = $state<{ value: string; symbology: string } | null>(null);
 	const brands = $derived(searchBrands(query));
 
 	onMount(() => refreshSession());
 
+	function pick(brand: Brand | 'unknown') {
+		picked = brand;
+		scanned = null;
+		scanning = true; // scanner starts immediately (Roadmap: card addition)
+	}
+
 	function initialFor(brand: Brand | 'unknown'): CardFormValues {
-		if (brand === 'unknown') {
-			return {
-				name: '',
-				color: '#495057',
-				barcode_value: '',
-				symbology: 'EAN_13',
-				visibility: 'private',
-				comment: ''
-			};
+		const base =
+			brand === 'unknown'
+				? {
+						name: '',
+						color: '#495057',
+						barcode_value: '',
+						symbology: 'EAN_13',
+						visibility: 'private' as const,
+						comment: ''
+					}
+				: {
+						name: brand.name,
+						color: brand.color,
+						barcode_value: '',
+						symbology: brand.symbology_hint ?? 'EAN_13',
+						visibility: 'private' as const,
+						comment: ''
+					};
+		if (scanned) {
+			base.barcode_value = scanned.value;
+			base.symbology = scanned.symbology;
 		}
-		return {
-			name: brand.name,
-			color: brand.color,
-			barcode_value: '',
-			symbology: brand.symbology_hint ?? 'EAN_13',
-			visibility: 'private',
-			comment: ''
-		};
+		return base;
 	}
 
 	async function create(values: CardFormValues) {
@@ -55,17 +69,28 @@
 	{/if}
 	<div class="grid">
 		{#each brands as brand (brand.id)}
-			<button class="tile" style="background:{brand.color}" onclick={() => (picked = brand)}>
+			<button class="tile" style="background:{brand.color}" onclick={() => pick(brand)}>
 				<span class="mono">{monogram(brand.name)}</span>
 				<span class="label">{brand.name}</span>
 			</button>
 		{/each}
-		<button class="tile unknown" onclick={() => (picked = 'unknown')}>
+		<button class="tile unknown" onclick={() => pick('unknown')}>
 			<span class="mono">?</span>
 			<span class="label">Unknown</span>
 		</button>
 	</div>
 {:else}
+	{#if scanning}
+		<Scanner
+			symbologyHint={picked === 'unknown' ? undefined : picked.symbology_hint}
+			ondetect={(value, symbology) => {
+				scanned = { value, symbology };
+				scanning = false;
+			}}
+			onmanual={() => (scanning = false)}
+			onclose={() => goto('/')}
+		/>
+	{/if}
 	<h1>Add card — {picked === 'unknown' ? 'custom' : picked.name}</h1>
 	<button class="secondary" onclick={() => (picked = null)}>← choose another brand</button>
 	<CardForm

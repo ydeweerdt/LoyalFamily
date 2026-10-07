@@ -12,10 +12,12 @@
 	let {
 		symbologyHint,
 		ondetect,
+		onmanual,
 		onclose
 	}: {
 		symbologyHint?: string;
 		ondetect: (value: string, symbology: string) => void;
+		onmanual: () => void;
 		onclose: () => void;
 	} = $props();
 
@@ -95,11 +97,16 @@
 <svelte:window onkeydown={(e) => e.key === 'Escape' && onclose()} />
 
 <div class="scanner" role="dialog" aria-label="Scan barcode">
+	<button class="back" aria-label="Back" title="Abort card addition" onclick={onclose}>
+		<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+			<path fill="currentColor" d="M20 11H7.8l5.1-5.1L12 5l-7 7 7 7 1.1-1.1L7.8 13H20v-2z" />
+		</svg>
+	</button>
 	<video bind:this={videoEl} playsinline muted autoplay></video>
 	<div class="frame" aria-hidden="true"></div>
 	<p class="status">{status}</p>
 	<div class="controls">
-		<button class="secondary" onclick={onclose}>Cancel / enter manually</button>
+		<button class="secondary" onclick={onmanual}>Manual</button>
 	</div>
 </div>
 
@@ -116,6 +123,22 @@
 		flex: 1;
 		width: 100%;
 		object-fit: cover;
+	}
+	.back {
+		position: absolute;
+		top: 0.75rem;
+		left: 0.75rem;
+		z-index: 210;
+		background: rgba(0, 0, 0, 0.45);
+		color: white;
+		border: none;
+		border-radius: 50%;
+		width: 2.4rem;
+		height: 2.4rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
 	}
 	.frame {
 		position: absolute;

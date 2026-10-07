@@ -22,6 +22,9 @@ export async function addCard(
 	await page.getByTitle('Add card').click();
 	await page.getByPlaceholder('Search brand or store…').fill(brandSearch);
 	await page.getByRole('button', { name: brandTile, exact: false }).click();
+	// scanner starts immediately; headless has no camera → go Manual
+	await expect(page.getByRole('dialog', { name: 'Scan barcode' })).toBeVisible();
+	await page.getByRole('button', { name: 'Manual' }).click();
 	await page.fill('input[name="barcode_value"]', values.barcode_value);
 	await page.selectOption('select[name="symbology"]', values.symbology);
 	if (values.comment) await page.fill('input[name="comment"]', values.comment);

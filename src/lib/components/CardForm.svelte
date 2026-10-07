@@ -97,6 +97,7 @@
 				values.symbology = symbology;
 				scanning = false;
 			}}
+			onmanual={() => (scanning = false)}
 			onclose={() => (scanning = false)}
 		/>
 	{/if}

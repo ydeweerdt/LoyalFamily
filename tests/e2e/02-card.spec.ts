@@ -59,6 +59,7 @@ test('invalid EAN-13 check digit is flagged before saving', async ({ page }) => 
 	await page.getByTitle('Add card').click();
 	await page.getByPlaceholder('Search brand or store…').fill('carrefour');
 	await page.getByRole('button', { name: 'Carrefour', exact: false }).click();
+	await page.getByRole('button', { name: 'Manual' }).click();
 	await page.fill('input[name="barcode_value"]', '5401234567890'); // wrong check digit (…894 is valid)
 	await page.selectOption('select[name="symbology"]', 'EAN_13');
 	await expect(page.getByText('invalid EAN-13 check digit')).toBeVisible();
