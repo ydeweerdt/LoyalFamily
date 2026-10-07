@@ -43,7 +43,9 @@ Vision: see [README.md](README.md). This document refines it into concrete requi
   fullscreen mode + Screen Wake Lock (where supported) + mostly-white rendering,
   which triggers adaptive brightness on most phones; one-time hint toast telling
   the user to raise brightness.
-- Long-press / menu on a tile: card actions — view, edit, delete.
+- Long-press on a tile: single-card tile → edit dialog (owner only); stacked
+  tile → opens the same tile view. In the tile view: tap a card tile → barcode,
+  long-press → edit dialog (delete lives in the edit dialog).
   Edit (owner only) covers: barcode value, symbology, color, comment, visibility.
   Brand `name` is fixed for catalog brands; free-text editable only for "Unknown"
   cards. Delete: owner, or admin (any card).

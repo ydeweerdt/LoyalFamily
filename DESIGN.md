@@ -20,8 +20,8 @@ Requirements: see [REQUIREMENTS.md](REQUIREMENTS.md). Stack: SvelteKit (adapter-
         │ save                      │
    [Home grid] ◄────────────────────┘
         │ tap tile (1 card)         → [Barcode view] fullscreen, wake lock, white max-contrast
-        │ tap tile (multi card)     → [Brand card list] → [Barcode view]
-        │ long-press / menu         → [Card edit] (owner only) / delete
+        │ tap tile (multi card)     → [Brand tile view: grid of card tiles] → tap card tile → [Barcode view]
+        │ long-press tile / card tile → [Card edit] (owner only; delete inside edit)
         │ menu                      → [Admin] users (roles, password reset, remove),
         │                             invites, delete-any-card
 ```
