@@ -20,7 +20,7 @@ test('PWA is installable: manifest, icons, SW control, offline cold launch', asy
 	expect(sizes).toContain('512x512');
 
 	// icons are actually served
-	for (const src of ['/icons/icon-192.png', '/icons/icon-512.png']) {
+	for (const src of ['/icons/icon-192.png', '/icons/icon-512.png', '/favicon.ico']) {
 		expect((await page.request.get(src)).status()).toBe(200);
 	}
 

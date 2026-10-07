@@ -43,6 +43,15 @@ describe('PWA artifacts', () => {
 		const html = fs.readFileSync('src/app.html', 'utf8');
 		expect(html).toContain('rel="manifest"');
 	});
+
+	it('favicon.ico is a valid PNG-in-ICO', () => {
+		const buf = fs.readFileSync('static/favicon.ico');
+		expect(buf.readUInt16LE(2)).toBe(1); // icon type
+		expect(buf.readUInt16LE(4)).toBe(1); // one image
+		expect(buf[6]).toBe(32); // width
+		expect(buf[7]).toBe(32); // height
+		expect(buf.subarray(22, 30)).toEqual(Buffer.from([137, 80, 71, 71, 13, 10, 26, 10])); // PNG signature
+	});
 });
 
 function pathJoin(...parts: string[]): string {

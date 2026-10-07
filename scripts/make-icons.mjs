@@ -85,4 +85,20 @@ const outDir = path.resolve('static/icons');
 fs.mkdirSync(outDir, { recursive: true });
 fs.writeFileSync(path.join(outDir, 'icon-192.png'), icon(192));
 fs.writeFileSync(path.join(outDir, 'icon-512.png'), icon(512));
-console.log('wrote static/icons/icon-192.png and icon-512.png');
+
+// favicon.ico = 32x32 PNG wrapped in an ICO container (accepted by all modern browsers)
+function ico(pngBuf) {
+	const head = Buffer.alloc(6); // ICONDIR: reserved, type=1 (icon), count=1
+	head.writeUInt16LE(1, 2);
+	head.writeUInt16LE(1, 4);
+	const entry = Buffer.alloc(16); // ICONDIRENTRY: w/h, planes@4, bpp@6, size@8, offset@12
+	entry[0] = 32;
+	entry[1] = 32;
+	entry.writeUInt16LE(1, 4); // planes
+	entry.writeUInt16LE(32, 6); // bpp
+	entry.writeUInt32LE(pngBuf.length, 8);
+	entry.writeUInt32LE(22, 12);
+	return Buffer.concat([head, entry, pngBuf]);
+}
+fs.writeFileSync(path.resolve('static/favicon.ico'), ico(icon(32)));
+console.log('wrote static/icons/icon-192.png, icon-512.png and static/favicon.ico');
