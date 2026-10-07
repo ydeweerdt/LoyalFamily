@@ -110,6 +110,7 @@ tests/e2e/01-setup.spec.ts    empty server → first admin → invite → join �
           02-card.spec.ts     brand picker → manual entry → tile → full-screen barcode
           03-offline.spec.ts  offline add → queued → reconnect → server truth
           04-sharing.spec.ts  shared vs private across two users (UI + API + 403)
+          05-pwa.spec.ts      manifest/icons served, SW controls page, offline cold launch
 ```
 
 Notes for writing e2e specs here:
