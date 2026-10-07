@@ -8,10 +8,20 @@ test:
 	docker build --target test -t loyalfamily-test .
 
 e2e:
-	@echo "e2e stage arrives with milestone 6 (Playwright)"
+	@echo "e2e (Playwright golden flows) — not wired up yet; see DESIGN §8"
 
 build:
 	docker build -t loyalfamily:latest .
 
 run: build
 	docker compose up --build
+
+# Vite dev server with hot reload, fully in-container:
+# source is bind-mounted; node_modules lives in a named volume so the
+# host tree stays clean and installs stay cached.
+dev:
+	docker build --target deps -t loyalfamily-deps .
+	docker volume create loyalfamily-dev-modules >/dev/null
+	docker run --rm -p 5173:5173 -v $(CURDIR):/app -v loyalfamily-dev-modules:/app/node_modules \
+		-e DATA_DIR=/tmp/dev-data -e COOKIE_SECRET=dev-secret-00000000000000000000000000 \
+		-w /app loyalfamily-deps npm run dev -- --host 0.0.0.0

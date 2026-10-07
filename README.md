@@ -12,3 +12,10 @@ title: LoyalFamily - PWA to replace Stocard
 * An administrator can invite other people to join
 * An administrator can change the type of account of other people to administrator or regular user
 
+
+## Docs
+
+- `REQUIREMENTS.md` — what we build (decisions closed)
+- `DESIGN.md` — how we build it (schema, API, sync, Docker, milestones)
+- `UserGuide.md` — build, run, deploy, back up, admin duties
+- `DeveloperGuide.md` — dev environment, tests, architecture rules
