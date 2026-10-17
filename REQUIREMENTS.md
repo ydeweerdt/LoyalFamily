@@ -112,13 +112,20 @@ attachment is a v2 candidate.
   symbol family: a 13-digit scan is stored as `EAN_13`, a 12-digit scan as
   `UPC_A`. The symbology picker preselects what the scanner reported; the user
   only overrides it on manual entry.
+- **Shape is validated when the card is saved**, not when it is opened: a value the
+  symbology cannot encode at all is refused by the form (reason shown inline) and by
+  the API — EAN-13 = 13 digits, UPC-A = 12 digits, CODE_39 = `0-9`, uppercase `A-Z`
+  and `- . $ / + %` space, CODE_128 = printable ASCII, QR = any printable text.
+  Editing only the value or only the symbology is checked against the pair the card
+  would end up with.
 - Checksums are **warned about, never blocked** where the symbology has one
   (EAN-13): some loyalty cards use non-standard check digits, and the owner knows
-  better than the app.
+  better than the app. The warning is shown while typing and again on the card view.
 - Values are printable text, 1–512 chars. QR values are stored as-is (byte mode),
   no escaping or re-encoding.
-- A value that cannot be rendered in its symbology falls back to the raw number +
-  symbology name: a readable number at the checkout beats a broken barcode.
+- A value that cannot be rendered in its symbology — imported or pre-existing data,
+  since new saves are rejected — falls back to the raw number + symbology name: a
+  readable number at the checkout beats a broken barcode.
 - **Acceptance gate:** "scannable at the checkout" is verified by the round-trip
   suite (§11) *and* by a manual matrix — supported symbology × phone (Android
   Chrome, iOS Safari) × a real store scanner — before every release. No unit test
