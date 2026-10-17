@@ -35,7 +35,60 @@ export const BRANDS: Brand[] = [
 	{ id: 'brico', name: 'Brico', color: '#ed1c24' },
 	{ id: 'bpost', name: 'Bpost', color: '#e2001a' },
 	{ id: 'proximus', name: 'Proximus', color: '#00a9e0' },
-	{ id: 'telenet', name: 'Telenet', color: '#00a3e0' }
+	{ id: 'telenet', name: 'Telenet', color: '#00a3e0' },
+	// fashion, drugstore and specialty chains (user-supplied list; Kruidvat,
+	// Decathlon, Carrefour and Hema were already in the catalog)
+	{ id: 'asadventure', name: 'A.S. Adventure', color: '#1c5c3c' },
+	{ id: 'gamma', name: 'GAMMA', color: '#004b8d' },
+	{ id: 'ca', name: 'C&A', color: '#123a6b' },
+	{ id: 'zara', name: 'Zara', color: '#1a1a1a' },
+	{ id: 'douglas', name: 'Douglas', color: '#2b2b2b' },
+	{ id: 'flyingtiger', name: 'Flying Tiger', color: '#ffb400' },
+	{ id: 'etam', name: 'Etam', color: '#e5007d' },
+	{ id: 'hm', name: 'H&M', color: '#c8102e' },
+	{ id: 'hansanders', name: 'Hans Anders', color: '#0057b8' },
+	{ id: 'hollandbarrett', name: 'Holland & Barrett', color: '#2e7d32' },
+	{ id: 'iciparisxl', name: 'Ici Paris XL', color: '#e2007a' },
+	{ id: 'hunkemoller', name: 'Hunkemöller', color: '#8f1d21' },
+	{ id: 'inno', name: 'INNO', color: '#d50032' },
+	{ id: 'jbc', name: 'JBC', color: '#cc0000' },
+	{ id: 'jackandjones', name: 'Jack & Jones', color: '#213a5c' },
+	{ id: 'msmode', name: 'MS Mode', color: '#2f2f2f' },
+	{ id: 'oilandvinegar', name: 'Oil & Vinegar', color: '#3f5d28' },
+	{ id: 'okaidi', name: 'Okaïdi', color: '#0099a8' },
+	{ id: 'only', name: 'ONLY', color: '#1f1f1f' },
+	{ id: 'onlyandsons', name: 'ONLY & Sons', color: '#2c3e50' },
+	{ id: 'pearle', name: 'Pearle', color: '#0072ce' },
+	{ id: 'pipoos', name: 'Pipoos', color: '#f07f00' },
+	{ id: 'rituals', name: 'Rituals', color: '#5b2c4d' },
+	{ id: 'riverwoods', name: 'River Woods', color: '#1f3a5f' },
+	{ id: 'standaard', name: 'Standaard Boekhandel', color: '#005a9c' },
+	{ id: 'torfs', name: 'Torfs', color: '#d52b1e' },
+	{ id: 'vandenborre', name: 'Vanden Borre', color: '#cc2200' },
+	{ id: 'yvesrocher', name: 'Yves Rocher', color: '#00693c' },
+	{ id: 'veritas', name: 'Veritas', color: '#b3001b' },
+	{ id: 'hetvershuisje', name: 'Het Vershuisje', color: '#2e8b57' },
+	{ id: 'aveve', name: 'Aveve', color: '#007a3d' },
+	{ id: 'vaneycksport', name: 'Van Eyck Sport', color: '#003c7b' },
+	{ id: 'unitedbrands', name: 'United Brands', color: '#1f2a44' },
+	{ id: 'bodyshop', name: 'The Body Shop', color: '#005c38' },
+	{ id: 'soliver', name: 's.Oliver', color: '#263238' },
+	{ id: 'produo', name: 'Pro-Duo', color: '#3a3a3a' },
+	{ id: 'paradisio', name: 'Paradisio', color: '#c2185b' },
+	{ id: 'modemakers', name: 'Modemakers', color: '#222222' },
+	{ id: 'levis', name: "Levi's", color: '#234a7d' },
+	{ id: 'kiabi', name: 'Kiabi', color: '#0f4c81' },
+	{ id: 'iu', name: 'iU', color: '#101820' },
+	{ id: 'guysnaaicentrum', name: "Guy's Naaicentrum", color: '#34495e' },
+	{ id: 'foka', name: 'Foka', color: '#404040' },
+	{ id: 'euroshop', name: 'Euroshop', color: '#004e8f' },
+	{ id: 'di', name: 'di!', color: '#f26522' },
+	{ id: 'desigual', name: 'Desigual', color: '#ef6c00' },
+	{ id: 'devleeshoeve', name: 'De Vleeshoeve', color: '#8b1a1a' },
+	{ id: 'damart', name: 'Damart', color: '#a4123f' },
+	{ id: 'cfe', name: 'CFE', color: '#4a5568' },
+	{ id: 'belbo', name: 'Bel&Bo', color: '#3b3b3b' },
+	{ id: 'apothekerswaasland', name: 'Apothekers Waasland', color: '#1b7f4b' }
 ];
 
 export function getBrand(id: string): Brand | undefined {
@@ -53,7 +106,7 @@ export function searchBrands(query: string): Brand[] {
 
 /** Two-letter monogram for tiles, e.g. "Colruyt / Bonus" → "CB". */
 export function monogram(name: string): string {
-	const words = name.split(/[\s/()]+/).filter(Boolean);
+	const words = name.split(/[\s/()&.]+/).filter(Boolean);
 	if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
 	return name.slice(0, 2).toUpperCase();
 }
