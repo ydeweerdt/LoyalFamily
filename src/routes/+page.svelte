@@ -15,11 +15,16 @@
 	let barcodeCard = $state<Card | null>(null);
 	let errorMsg = $state('');
 	let query = $state('');
+	let loading = $state(true);
 	const shownTiles = $derived(filterTiles($tiles, query));
 
 	onMount(async () => {
 		await refreshSession();
-		await loadCards();
+		try {
+			await loadCards();
+		} finally {
+			loading = false;
+		}
 	});
 
 	async function saveEdit(values: CardFormValues) {
@@ -90,23 +95,29 @@
 {#if $session.user}
 	<div class="toolbar">
 		<h1>{t('cards')}</h1>
-		<a href="/add" class="add" title={t('add_card_title')}>＋</a>
+		<a href="/add" class="add icon-btn" title={t('add_card_title')} aria-label={t('add_card_title')}>
+			<Icon name="add" size={22} />
+		</a>
 	</div>
 
 	{#if errorMsg}<p class="error">{errorMsg}</p>{/if}
 
 	{#if $offline || $failed > 0}
 		<p class="offline">
-			{#if $offline}⚠ {t('offline')}{$pending > 0 ? ` ${$pending} ${t('changes_waiting')}.` : ''}{/if}
-			{#if $failed > 0}<span class="failed">⚠ {$failed} {t('changes_failed')}.</span>{/if}
+			{#if $offline}<Icon name="warning" size={16} /> {t('offline')}{$pending > 0 ? ` ${$pending} ${t('changes_waiting')}.` : ''}{/if}
+			{#if $failed > 0}<span class="failed"><Icon name="warning" size={16} /> {$failed} {t('changes_failed')}.</span>{/if}
 		</p>
 	{/if}
 
-	{#if $tiles.length === 0}
+	{#if loading && $tiles.length === 0}
+		<div class="grid">
+			{#each [1, 2, 3] as i}<span class="tile skeleton"></span>{/each}
+		</div>
+	{:else if $tiles.length === 0}
 		<p>{t('no_cards')}</p>
 	{:else}
 		{#if $tiles.length > 3}
-			<input class="search" type="search" placeholder={t('search_cards')} bind:value={query} autocomplete="off" />
+			<input class="field" type="search" placeholder={t('search_cards')} bind:value={query} autocomplete="off" />
 		{/if}
 		{#if shownTiles.length === 0}
 			<p>{t('no_match')} “{query}”.</p>
@@ -126,7 +137,7 @@
 					<span class="mono">{monogram(tile.name)}</span>
 					<span class="label">{tile.name}</span>
 					{#if tile.count > 1}<span class="badge count">{tile.count}</span>{/if}
-					{#if tile.hasMyPrivate}<span class="badge lock">🔒</span>{/if}
+					{#if tile.hasMyPrivate}<span class="badge lock"><Icon name="lock" size={13} /></span>{/if}
 				</button>
 			{/each}
 		</div>
@@ -151,7 +162,7 @@
 						>
 							<span class="mono">{monogram(card.name)}</span>
 							<span class="label">{card.comment || card.name}</span>
-							{#if card.visibility === 'private' && card.owner_id === $session.user?.id}<span class="badge lock">🔒</span>{/if}
+							{#if card.visibility === 'private' && card.owner_id === $session.user?.id}<span class="badge lock"><Icon name="lock" size={13} /></span>{/if}
 						</button>
 					{/each}
 				</div>
@@ -185,7 +196,7 @@
 					oncancel={() => (editCard = null)}
 				/>
 				{#if canManage(editCard)}
-					<button class="icon-btn danger" aria-label={t('delete_card')} title={t('delete_card')} onclick={() => editCard && remove(editCard)}>
+					<button class="icon-btn btn-danger" aria-label={t('delete_card')} title={t('delete_card')} onclick={() => editCard && remove(editCard)}>
 						<Icon name="trash" />
 					</button>
 				{/if}
@@ -205,128 +216,25 @@
 		align-items: center;
 	}
 	.add {
-		font-size: 1.6rem;
-		text-decoration: none;
-		background: #0b7285;
-		color: white;
-		border-radius: 8px;
-		width: 2.2rem;
-		height: 2.2rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	.grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 0.6rem;
-	}
-	.search {
-		width: 100%;
-		padding: 0.5rem;
-		box-sizing: border-box;
-		margin-bottom: 0.75rem;
-	}
-	.tile {
-		position: relative;
-		aspect-ratio: 1;
-		border: none;
-		border-radius: 10px;
-		color: white;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 0.3rem;
-		cursor: pointer;
-	}
-	.mono {
-		font-size: 1.8rem;
-		font-weight: 800;
-		opacity: 0.95;
-	}
-	.label {
-		font-size: 0.75rem;
-		opacity: 0.9;
-		max-width: 90%;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.badge {
-		position: absolute;
-		font-size: 0.7rem;
-		padding: 0.1rem 0.35rem;
-		border-radius: 6px;
-		background: rgba(0, 0, 0, 0.45);
-	}
-	.badge.count {
-		top: 6px;
-		right: 6px;
-	}
-	.badge.lock {
-		top: 6px;
-		left: 6px;
-	}
-	.modal {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.45);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 1rem;
-	}
-	.modal-body {
-		background: white;
-		border-radius: 12px;
-		padding: 1rem;
-		width: 100%;
-		max-width: 420px;
-		max-height: 85vh;
-		overflow: auto;
-	}
-	.meta {
-		display: block;
-		font-size: 0.75rem;
-		color: #666;
-	}
-	.danger {
-		background: #c92a2a;
-		color: white;
-	}
-	.icon-btn {
-		background: #e9ecef;
-		border: none;
-		border-radius: 8px;
-		width: 2.2rem;
-		height: 2.2rem;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		cursor: pointer;
-		color: #212529;
-	}
-	.icon-btn.danger {
-		background: #c92a2a;
-		color: white;
-	}
-	.secondary {
-		background: #e9ecef;
-		margin-top: 0.5rem;
+		background: var(--brand);
+		color: var(--brand-ink);
 	}
 	.offline {
-		background: #fff3bf;
-		border: 1px solid #ffd84d;
-		border-radius: 8px;
-		padding: 0.5rem 0.75rem;
-		font-size: 0.85rem;
+		background: var(--warn-bg);
+		border: 1px solid var(--warn);
+		border-radius: var(--radius-sm);
+		padding: 0.6rem 0.75rem;
+		font-size: 0.9rem;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		align-items: center;
 	}
 	.offline .failed {
-		color: #c92a2a;
+		color: var(--danger);
 		font-weight: 600;
-	}
-	.error {
-		color: #c92a2a;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
 	}
 </style>

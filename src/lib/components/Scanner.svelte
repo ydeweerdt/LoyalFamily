@@ -2,6 +2,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { BrowserMultiFormatReader, DecodeHintType, type Result } from '@zxing/library';
 	import { formatName, mapFormat, orderedFormats } from '$lib/domain/scanner';
+	import Icon from '$lib/components/Icon.svelte';
 	import { t } from '$lib/i18n.svelte';
 
 	/**
@@ -99,15 +100,13 @@
 
 <div class="scanner" role="dialog" aria-label={t('scan_barcode')}>
 	<button class="back" aria-label={t('back')} title={t('back')} onclick={onclose}>
-		<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-			<path fill="currentColor" d="M20 11H7.8l5.1-5.1L12 5l-7 7 7 7 1.1-1.1L7.8 13H20v-2z" />
-		</svg>
+		<Icon name="back" size={24} />
 	</button>
 	<video bind:this={videoEl} playsinline muted autoplay></video>
 	<div class="frame" aria-hidden="true"></div>
 	<p class="status">{status}</p>
 	<div class="controls">
-		<button class="secondary" onclick={onmanual}>{t('manual')}</button>
+		<button class="btn" onclick={onmanual}>{t('manual')}</button>
 	</div>
 </div>
 
@@ -116,7 +115,8 @@
 		position: fixed;
 		inset: 0;
 		background: #000;
-		z-index: 200;
+		color: #fff;
+		z-index: var(--z-scanner);
 		display: flex;
 		flex-direction: column;
 	}
@@ -127,15 +127,15 @@
 	}
 	.back {
 		position: absolute;
-		top: 0.75rem;
+		top: calc(0.75rem + var(--safe-t));
 		left: 0.75rem;
-		z-index: 210;
+		z-index: calc(var(--z-scanner) + 1);
 		background: rgba(0, 0, 0, 0.45);
 		color: white;
 		border: none;
 		border-radius: 50%;
-		width: 2.4rem;
-		height: 2.4rem;
+		width: 44px;
+		height: 44px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -149,22 +149,19 @@
 		height: min(40vh, 220px);
 		transform: translate(-50%, -50%);
 		border: 2px solid rgba(255, 255, 255, 0.85);
-		border-radius: 10px;
+		border-radius: var(--radius);
 		box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
 		pointer-events: none;
 	}
 	.status {
 		color: #fff;
 		text-align: center;
-		font-size: 0.85rem;
+		font-size: 0.9rem;
 		padding: 0.5rem;
 	}
 	.controls {
-		padding: 0.75rem;
+		padding: 0.75rem 0.75rem calc(0.75rem + var(--safe-b));
 		display: flex;
 		justify-content: center;
-	}
-	.secondary {
-		background: #e9ecef;
 	}
 </style>

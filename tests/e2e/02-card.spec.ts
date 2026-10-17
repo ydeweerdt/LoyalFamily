@@ -22,7 +22,7 @@ test('add a card via brand picker and see its barcode full-screen', async ({ pag
 	// single-card tile: tap → barcode full-screen with a rendered SVG
 	await tile.click();
 	await expect(page.locator('.fullscreen')).toBeVisible();
-	await expect(page.locator('.fullscreen svg')).toBeVisible();
+	await expect(page.locator('.barcode svg')).toBeVisible();
 	await page.keyboard.press('Escape');
 	await expect(page.locator('.fullscreen')).toBeHidden();
 });

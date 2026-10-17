@@ -69,10 +69,6 @@
 {/if}
 
 <style>
-	.error {
-		color: #c92a2a;
-		font-size: 0.85rem;
-	}
 	.fallback {
 		display: block;
 		font-size: 1.1rem;

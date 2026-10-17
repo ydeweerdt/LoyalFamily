@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { refreshSession } from '$lib/stores/session';
 	import { t } from '$lib/i18n.svelte';
 
@@ -19,7 +20,7 @@
 		});
 		if (r.ok) {
 			await refreshSession();
-			location.href = '/';
+			await goto('/');
 		} else {
 			errorMsg = (await r.json()).error ?? 'Login failed';
 		}
@@ -29,29 +30,15 @@
 
 <h1>{t('sign_in')}</h1>
 <form onsubmit={submit}>
-	<label>
+	<label class="field-label">
 		{t('username')}
-		<input name="username" bind:value={username} autocomplete="username" required />
+		<input class="field" name="username" bind:value={username} autocomplete="username" required />
 	</label>
-	<label>
+	<label class="field-label">
 		{t('password')}
-		<input name="password" type="password" bind:value={password} autocomplete="current-password" required />
+		<input class="field" name="password" type="password" bind:value={password} autocomplete="current-password" required />
 	</label>
-	<button disabled={busy}>{t('sign_in')}</button>
+	<button class="btn btn-primary" disabled={busy}>{t('sign_in')}</button>
 </form>
 {#if errorMsg}<p class="error">{errorMsg}</p>{/if}
 
-<style>
-	label {
-		display: block;
-		margin: 0.5rem 0;
-	}
-	input {
-		display: block;
-		width: 100%;
-		padding: 0.4rem;
-	}
-	.error {
-		color: #c92a2a;
-	}
-</style>

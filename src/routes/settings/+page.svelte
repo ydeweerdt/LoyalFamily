@@ -84,6 +84,7 @@
 
 	<h2>{t('language')}</h2>
 	<select
+		class="field"
 		value={langSel}
 		onchange={(e) => {
 			langSel = (e.target as HTMLSelectElement).value;
@@ -97,7 +98,7 @@
 
 	<h2>{t('backup')}</h2>
 	<div class="row">
-		<button onclick={downloadExport}>{t('export_btn')}</button>
+		<button class="btn btn-primary" onclick={downloadExport}>{t('export_btn')}</button>
 		<label class="file">
 			{t('import_btn')}
 			<input type="file" accept=".json,application/json" onchange={importFile} />
@@ -112,24 +113,16 @@
 			change();
 		}}
 	>
-		<label>{t('current_password')} <input name="current_password" type="password" bind:value={current} required autocomplete="current-password" /></label>
-		<label>{t('new_password')} <input name="new_password" type="password" bind:value={next} required minlength={8} autocomplete="new-password" /></label>
-		<button>{t('change_password')}</button>
+		<label class="field-label">{t('current_password')} <input class="field" name="current_password" type="password" bind:value={current} required autocomplete="current-password" /></label>
+		<label class="field-label">{t('new_password')} <input class="field" name="new_password" type="password" bind:value={next} required minlength={8} autocomplete="new-password" /></label>
+		<button class="btn btn-primary">{t('change_password')}</button>
 	</form>
 	{#if msg}<p class={isError ? 'error' : 'ok'}>{msg}</p>{/if}
 {/if}
 
 <style>
 	form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.6rem;
 		max-width: 340px;
-	}
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
 	}
 	.row {
 		display: flex;
@@ -138,13 +131,7 @@
 		align-items: center;
 	}
 	.file {
-		font-size: 0.85rem;
-		color: #495057;
-	}
-	.error {
-		color: #c92a2a;
-	}
-	.ok {
-		color: #2b8a3e;
+		font-size: 0.9rem;
+		color: var(--text-muted);
 	}
 </style>

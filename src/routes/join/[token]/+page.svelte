@@ -42,27 +42,16 @@
 		join();
 	}}
 >
-	<label>{t('username')} <input name="username" bind:value={username} required minlength={3} maxlength={32} pattern="[a-z0-9_.]+" autocomplete="username" /></label>
-	<label>{t('display_name')} <input name="display_name" bind:value={displayName} required maxlength={64} autocomplete="name" /></label>
-	<label>{t('password')} <input name="password" type="password" bind:value={password} required minlength={8} autocomplete="new-password" /></label>
-	<button disabled={busy}>{t('join')}</button>
+	<label class="field-label">{t('username')} <input class="field" name="username" bind:value={username} required minlength={3} maxlength={32} pattern="[a-z0-9_.]+" autocomplete="username" /></label>
+	<label class="field-label">{t('display_name')} <input class="field" name="display_name" bind:value={displayName} required maxlength={64} autocomplete="name" /></label>
+	<label class="field-label">{t('password')} <input class="field" name="password" type="password" bind:value={password} required minlength={8} autocomplete="new-password" /></label>
+	<button class="btn btn-primary" disabled={busy}>{t('join')}</button>
 </form>
 
 {#if errorMsg}<p class="error">{errorMsg}</p>{/if}
 
 <style>
 	form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.6rem;
 		max-width: 340px;
-	}
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-	.error {
-		color: #c92a2a;
 	}
 </style>

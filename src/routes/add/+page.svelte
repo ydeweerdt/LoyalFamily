@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import CardForm, { type CardFormValues } from '$lib/components/CardForm.svelte';
 	import Scanner from '$lib/components/Scanner.svelte';
+	import Icon from '$lib/components/Icon.svelte';
 	import { monogram, searchBrands, type Brand } from '$lib/brands';
 	import { addCard } from '$lib/stores/cards';
 	import { uuid } from '$lib/domain/uuid';
@@ -64,7 +65,7 @@
 	<p><a href="/login">{t('sign_in_to_add')}</a></p>
 {:else if picked === null}
 	<h1>{t('add_card')}</h1>
-	<input class="search" type="search" placeholder={t('search_brand')} bind:value={query} autocomplete="off" />
+	<input class="field" type="search" placeholder={t('search_brand')} bind:value={query} autocomplete="off" />
 	{#if brands.length === 0}
 		<p>{t('no_brand_match')}</p>
 	{/if}
@@ -76,7 +77,7 @@
 			</button>
 		{/each}
 		<button class="tile unknown" onclick={() => pick('unknown')}>
-			<span class="mono">?</span>
+			<span class="mono"><Icon name="help" size={28} /></span>
 			<span class="label">{t('unknown')}</span>
 		</button>
 	</div>
@@ -93,7 +94,7 @@
 		/>
 	{:else}
 		<h1>{t('add_card')} — {picked === 'unknown' ? t('custom') : picked.name}</h1>
-		<button class="secondary" onclick={() => (picked = null)}>{t('choose_another')}</button>
+		<button class="btn" onclick={() => (picked = null)}>{t('choose_another')}</button>
 		<CardForm
 			initial={initialFor(picked)}
 			submitLabel={t('add_card')}
@@ -105,47 +106,8 @@
 {/if}
 
 <style>
-	.search {
-		width: 100%;
-		padding: 0.5rem;
-		box-sizing: border-box;
-		margin-bottom: 0.75rem;
-	}
-	.grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 0.6rem;
-	}
-	.tile {
-		position: relative;
-		aspect-ratio: 1;
-		border: none;
-		border-radius: 10px;
-		color: white;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 0.3rem;
-		cursor: pointer;
-	}
 	.tile.unknown {
-		background: #adb5bd;
-	}
-	.mono {
-		font-size: 1.8rem;
-		font-weight: 800;
-	}
-	.label {
-		font-size: 0.75rem;
-		opacity: 0.9;
-		max-width: 90%;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.secondary {
-		background: #e9ecef;
-		margin-bottom: 0.5rem;
+		background: var(--surface-2);
+		color: var(--text-muted);
 	}
 </style>

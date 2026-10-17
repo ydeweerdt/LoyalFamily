@@ -3,6 +3,7 @@
 	import { loadCards } from '$lib/stores/cards';
 	import { logout, refreshSession, session } from '$lib/stores/session';
 	import { initLang, t } from '$lib/i18n.svelte';
+	import Icon from '$lib/components/Icon.svelte';
 	import type { Snippet } from 'svelte';
 
 	let { children }: { children: Snippet } = $props();
@@ -40,19 +41,17 @@
 				aria-expanded={menuOpen}
 				onclick={() => (menuOpen = !menuOpen)}
 			>
-				<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-					<path fill="currentColor" d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" />
-				</svg>
+				<Icon name="menu" size={22} />
 			</button>
 			{#if menuOpen}
-				<div class="backdrop" onclick={() => (menuOpen = false)}></div>
+				<button class="backdrop" aria-label={t('close')} onclick={() => (menuOpen = false)}></button>
 				<div class="menu-panel">
 					<span class="who">{$session.user.display_name}</span>
 					{#if $session.user.role === 'admin'}
 						<a href="/admin" onclick={() => (menuOpen = false)}>{t('admin')}</a>
 					{/if}
 					<a href="/settings" onclick={() => (menuOpen = false)}>{t('settings')}</a>
-					<button onclick={() => { menuOpen = false; logout(); }}>{t('sign_out')}</button>
+					<button class="menu-item" onclick={() => { menuOpen = false; logout(); }}>{t('sign_out')}</button>
 				</div>
 			{/if}
 		{:else}
@@ -69,21 +68,218 @@
 </main>
 
 <style>
+	/* Design tokens + shared classes: the only place colors, radii and z-layers are defined. */
+	:global(:root) {
+		--brand: #0b7285;
+		--brand-ink: #ffffff;
+		--surface: #ffffff;
+		--surface-2: #f4f6f7;
+		--line: #dee2e6;
+		--text: #1c2023;
+		--text-muted: #5f6b72;
+		--danger: #c92a2a;
+		--danger-bg: #ffe3e3;
+		--ok: #2b8a3e;
+		--warn: #b45309;
+		--warn-bg: #fff3bf;
+		--ok-bg: #d3f9d8;
+		--radius: 14px;
+		--radius-sm: 10px;
+		--z-menu: 20;
+		--z-modal: 30;
+		--z-fullscreen: 40;
+		--z-scanner: 50;
+		--safe-t: env(safe-area-inset-top, 0px);
+		--safe-b: env(safe-area-inset-bottom, 0px);
+	}
+	@media (prefers-color-scheme: dark) {
+		:global(:root) {
+			--surface: #16191c;
+			--surface-2: #23272b;
+			--line: #343a40;
+			--text: #e9ecef;
+			--text-muted: #9aa4ab;
+			--danger: #ffa8a8;
+			--danger-bg: #3d1c1c;
+			--ok: #8ce99a;
+			--warn: #ffd8a8;
+			--warn-bg: #3a2f14;
+			--ok-bg: #1c3d22;
+		}
+	}
+	:global(html),
+	:global(body) {
+		font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	}
+	:global(body) {
+		margin: 0;
+		background: var(--surface);
+		color: var(--text);
+	}
+	:global(.btn) {
+		font: inherit;
+		border: none;
+		border-radius: var(--radius-sm);
+		padding: 0.6rem 1rem;
+		min-height: 44px;
+		cursor: pointer;
+		background: var(--surface-2);
+		color: var(--text);
+	}
+	:global(.icon-btn) {
+		background: var(--surface-2);
+		border: none;
+		border-radius: var(--radius-sm);
+		width: 44px;
+		height: 44px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		color: var(--text);
+	}
+	:global(.btn-primary) {
+		background: var(--brand);
+		color: var(--brand-ink);
+	}
+	:global(.btn-danger) {
+		background: var(--danger-bg);
+		color: var(--danger);
+	}
+	:global(.field-label) {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		margin: 0.6rem 0;
+		font-size: 0.95rem;
+	}
+	:global(.field) {
+		display: block;
+		width: 100%;
+		padding: 0.65rem 0.75rem;
+		min-height: 44px;
+		box-sizing: border-box;
+		font: inherit;
+		background: var(--surface);
+		color: var(--text);
+		border: 1px solid var(--line);
+		border-radius: var(--radius-sm);
+	}
+	:global(.chip) {
+		font-size: 0.8rem;
+		text-transform: uppercase;
+		padding: 0.2rem 0.5rem;
+		border-radius: 999px;
+		background: var(--surface-2);
+		color: var(--text-muted);
+	}
+	:global(.chip-ok) {
+		background: var(--ok-bg);
+		color: var(--ok);
+	}
+	:global(.chip-danger) {
+		background: var(--danger-bg);
+		color: var(--danger);
+	}
+	:global(.grid) {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 0.6rem;
+	}
+	:global(.tile) {
+		position: relative;
+		aspect-ratio: 1;
+		border: none;
+		border-radius: var(--radius);
+		color: #fff;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.3rem;
+		cursor: pointer;
+	}
+	:global(.tile.skeleton) {
+		background: var(--surface-2);
+	}
+	:global(.mono) {
+		font-size: 1.8rem;
+		font-weight: 800;
+		opacity: 0.95;
+	}
+	:global(.label) {
+		font-size: 0.8rem;
+		opacity: 0.92;
+		max-width: 90%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	:global(.badge) {
+		position: absolute;
+		font-size: 0.75rem;
+		padding: 0.1rem 0.35rem;
+		border-radius: 6px;
+		background: rgba(0, 0, 0, 0.45);
+		display: inline-flex;
+		align-items: center;
+	}
+	:global(.badge.count) {
+		top: 6px;
+		right: 6px;
+	}
+	:global(.badge.lock) {
+		top: 6px;
+		left: 6px;
+	}
+	:global(.modal) {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.45);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		z-index: var(--z-modal);
+	}
+	:global(.modal-body) {
+		background: var(--surface);
+		color: var(--text);
+		border-radius: var(--radius);
+		padding: 1rem;
+		width: 100%;
+		max-width: 420px;
+		max-height: 85vh;
+		overflow: auto;
+	}
+	:global(.error) {
+		color: var(--danger);
+	}
+	:global(.ok) {
+		color: var(--ok);
+	}
+	:global(.warn) {
+		color: var(--warn);
+		font-size: 0.9rem;
+	}
+	:global(.meta) {
+		color: var(--text-muted);
+		font-size: 0.85rem;
+	}
+
 	nav {
 		position: sticky;
 		top: 0;
-		z-index: 100;
+		z-index: var(--z-menu);
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 0.6rem 1rem;
-		background: #0b7285;
-		color: white;
-		border: none;
-		box-shadow: none;
+		padding: calc(0.6rem + var(--safe-t)) 1rem 0.6rem;
+		background: var(--brand);
+		color: var(--brand-ink);
 	}
 	nav a.brand {
-		color: white;
+		color: var(--brand-ink);
 		font-weight: 700;
 		text-decoration: none;
 	}
@@ -101,54 +297,59 @@
 	.menu-btn {
 		background: none;
 		border: none;
-		color: white;
+		color: var(--brand-ink);
 		cursor: pointer;
 		display: flex;
 		align-items: center;
-		padding: 0.2rem;
+		justify-content: center;
+		width: 44px;
+		height: 44px;
+		/* nav creates the stacking context for its own backdrop/panel: keep the button clickable */
+		position: relative;
+		z-index: 2;
 	}
 	.backdrop {
 		position: fixed;
 		inset: 0;
-		z-index: 90;
+		z-index: 1;
+		border: none;
+		background: transparent;
 	}
 	.menu-panel {
 		position: absolute;
 		top: 100%;
 		right: 0.5rem;
-		background: white;
-		color: #212529;
-		border-radius: 10px;
+		background: var(--surface);
+		color: var(--text);
+		border-radius: var(--radius);
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 		min-width: 180px;
 		padding: 0.4rem 0;
 		display: flex;
 		flex-direction: column;
-		z-index: 100;
+		z-index: 3;
 	}
-	.menu-panel a {
-		color: #212529;
-		text-decoration: none;
-		padding: 0.55rem 1rem;
-	}
-	.menu-panel .who {
-		color: #666;
-		font-size: 0.85rem;
-		padding: 0.4rem 1rem;
-		border-bottom: 1px solid #eee;
-	}
+	.menu-panel a,
 	.menu-item {
+		color: var(--text);
+		text-decoration: none;
 		background: none;
 		border: none;
 		text-align: left;
 		font: inherit;
 		cursor: pointer;
-		padding: 0.55rem 1rem;
-		color: #212529;
+		padding: 0.65rem 1rem;
+		min-height: 44px;
+	}
+	.menu-panel .who {
+		color: var(--text-muted);
+		font-size: 0.9rem;
+		padding: 0.5rem 1rem;
+		border-bottom: 1px solid var(--line);
 	}
 	main {
 		max-width: 480px;
 		margin: 0 auto;
-		padding: 1rem;
+		padding: 1rem 1rem calc(1rem + var(--safe-b));
 	}
 </style>

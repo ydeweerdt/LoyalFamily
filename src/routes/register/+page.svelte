@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { refreshSession } from '$lib/stores/session';
 	import { t } from '$lib/i18n.svelte';
 
@@ -21,7 +22,7 @@
 		});
 		if (r.ok) {
 			await refreshSession();
-			location.href = '/';
+			await goto('/');
 		} else {
 			errorMsg = (await r.json()).error ?? 'Registration failed';
 		}
@@ -30,39 +31,21 @@
 </script>
 
 <h1>{t('register')}</h1>
-<p class="hint">{t('register_hint')}</p>
+<p class="meta">{t('register_hint')}</p>
 <form onsubmit={submit}>
-	<label>
+	<label class="field-label">
 		{t('username')}
-		<input name="username" bind:value={username} autocomplete="username" required />
+		<input class="field" name="username" bind:value={username} autocomplete="username" required />
 	</label>
-	<label>
+	<label class="field-label">
 		{t('display_name')}
-		<input name="display_name" bind:value={displayName} autocomplete="name" required />
+		<input class="field" name="display_name" bind:value={displayName} autocomplete="name" required />
 	</label>
-	<label>
+	<label class="field-label">
 		{t('password')}
-		<input name="password" type="password" bind:value={password} autocomplete="new-password" required />
+		<input class="field" name="password" type="password" bind:value={password} autocomplete="new-password" required />
 	</label>
-	<button disabled={busy}>{t('register_as_first')}</button>
+	<button class="btn btn-primary" disabled={busy}>{t('register_as_first')}</button>
 </form>
 {#if errorMsg}<p class="error">{errorMsg}</p>{/if}
 {#if info}<p>{info}</p>{/if}
-
-<style>
-	label {
-		display: block;
-		margin: 0.5rem 0;
-	}
-	input {
-		display: block;
-		width: 100%;
-		padding: 0.4rem;
-	}
-	.error {
-		color: #c92a2a;
-	}
-	.hint {
-		color: #666;
-	}
-</style>

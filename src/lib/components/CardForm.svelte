@@ -51,18 +51,19 @@
 </script>
 
 <form onsubmit={submit} autocomplete="off">
-	<label>
+	<label class="field-label">
 		{t('name')}
-		<input name="name" bind:value={values.name} maxlength={64} required autocomplete="off" data-1p-ignore />
+		<input class="field" name="name" bind:value={values.name} maxlength={64} required autocomplete="off" data-1p-ignore />
 	</label>
-	<label>
+	<label class="field-label">
 		{t('color')}
-		<input name="color" type="color" bind:value={values.color} />
+		<input class="swatch" name="color" type="color" bind:value={values.color} />
 	</label>
-	<label>
+	<label class="field-label">
 		{t('barcode_value')}
 		<div class="barrow">
 			<input
+				class="field"
 				name="barcode_value"
 				bind:value={values.barcode_value}
 				maxlength={512}
@@ -74,7 +75,7 @@
 				spellcheck={false}
 				data-1p-ignore
 			/>
-			<button type="button" class="scan" aria-label={t('scan_barcode')} title={t('scan_barcode')} onclick={() => (scanning = true)}>
+			<button type="button" class="btn btn-primary icon-btn" aria-label={t('scan_barcode')} title={t('scan_barcode')} onclick={() => (scanning = true)}>
 				<Icon name="scan" />
 			</button>
 		</div>
@@ -82,9 +83,9 @@
 	{#if ean13Bad}
 		<p class="warn">{t('ean13_warn')}</p>
 	{/if}
-	<label>
+	<label class="field-label">
 		{t('symbology')}
-		<select name="symbology" bind:value={values.symbology}>
+		<select class="field" name="symbology" bind:value={values.symbology}>
 			{#each SYMBOLOGIES as s}
 				<option value={s}>{s}</option>
 			{/each}
@@ -95,12 +96,12 @@
 			onchange={(e) => (values.visibility = (e.currentTarget as HTMLInputElement).checked ? 'shared' : 'private')} />
 			{t('shared_hint')}
 	</label>
-	<label>
+	<label class="field-label">
 		{t('comment_hint')}
-		<input name="comment" bind:value={values.comment} maxlength={200} autocomplete="off" data-1p-ignore />
+		<input class="field" name="comment" bind:value={values.comment} maxlength={200} autocomplete="off" data-1p-ignore />
 	</label>
 	<div class="row">
-		<button disabled={busy}>{submitLabel}</button>
+		<button class="btn btn-primary" disabled={busy}>{submitLabel}</button>
 		<button type="button" class="icon-btn" aria-label={t('cancel')} title={t('cancel')} onclick={oncancel}>
 			<Icon name="back" />
 		</button>
@@ -121,46 +122,25 @@
 </form>
 
 <style>
-	label {
-		display: block;
-		margin: 0.5rem 0;
-		font-size: 0.9rem;
-	}
-	input:not([type='checkbox']):not([type='color']),
-	select {
-		display: block;
+	.swatch {
+		height: 44px;
 		width: 100%;
-		padding: 0.4rem;
+		padding: 0.15rem;
 		box-sizing: border-box;
-	}
-	input[type='color'] {
-		height: 2.2rem;
-		padding: 0.1rem;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: var(--radius-sm);
 	}
 	.check {
 		display: flex;
 		gap: 0.5rem;
 		align-items: center;
+		font-size: 0.95rem;
 	}
 	.row {
 		display: flex;
 		gap: 0.5rem;
 		margin-top: 0.75rem;
-	}
-	.secondary {
-		background: #e9ecef;
-	}
-	.icon-btn {
-		background: #e9ecef;
-		border: none;
-		border-radius: 8px;
-		width: 2.2rem;
-		height: 2.2rem;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		cursor: pointer;
-		color: #212529;
 	}
 	.barrow {
 		display: flex;
@@ -168,17 +148,5 @@
 	}
 	.barrow input {
 		flex: 1;
-	}
-	.scan {
-		background: #0b7285;
-		color: white;
-		white-space: nowrap;
-	}
-	.warn {
-		color: #b45309;
-		font-size: 0.85rem;
-	}
-	.error {
-		color: #c92a2a;
 	}
 </style>

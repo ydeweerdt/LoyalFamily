@@ -90,7 +90,7 @@
 	{#if errorMsg}<p class="error">{errorMsg}</p>{/if}
 
 	<h2>{t('invite_people')}</h2>
-	<button onclick={createInvite}>{t('create_invite')}</button>
+	<button class="btn btn-primary" onclick={createInvite}>{t('create_invite')}</button>
 	{#if newInviteUrl}
 		<p class="invite">{t('invite_share')}<br />
 			<code>{newInviteUrl}</code></p>
@@ -99,9 +99,9 @@
 		{#if invites.length === 0}<li class="meta">{t('no_invites')}</li>{/if}
 		{#each invites as i (i.id)}
 			<li>
-				<span class="status {i.used_at ? 'used' : i.expired ? 'expired' : 'active'}">{inviteStatus(i)}</span>
+				<span class="chip {i.used_at ? '' : i.expired ? 'chip-danger' : 'chip-ok'}">{inviteStatus(i)}</span>
 				<span class="meta">{tf('expires', { date: i.expires_at.slice(0, 10) })}</span>
-				{#if !i.used_at && !i.expired}<button onclick={() => revoke(i.id)}>{t('revoke')}</button>{/if}
+				{#if !i.used_at && !i.expired}<button class="btn btn-danger" onclick={() => revoke(i.id)}>{t('revoke')}</button>{/if}
 			</li>
 		{/each}
 	</ul>
@@ -118,10 +118,10 @@
 					<td>{u.username}</td>
 					<td>{u.role === 'admin' ? t('role_admin') : t('role_user')}</td>
 					<td class="actions">
-						<button onclick={() => toggleRole(u)}>{u.role === 'admin' ? t('demote') : t('promote')}</button>
-						<button onclick={() => resetPassword(u)}>{t('reset_password')}</button>
+						<button class="btn" onclick={() => toggleRole(u)}>{u.role === 'admin' ? t('demote') : t('promote')}</button>
+						<button class="btn" onclick={() => resetPassword(u)}>{t('reset_password')}</button>
 						{#if u.id !== $session.user?.id}
-							<button class="danger" onclick={() => removeUser(u)}>{t('delete')}</button>
+							<button class="btn btn-danger" onclick={() => removeUser(u)}>{t('delete')}</button>
 						{/if}
 					</td>
 				</tr>
@@ -138,21 +138,14 @@
 	}
 	th, td {
 		text-align: left;
-		padding: 0.4rem 0.5rem;
-		border-bottom: 1px solid #dee2e6;
-		font-size: 0.9rem;
+		padding: 0.5rem;
+		border-bottom: 1px solid var(--line);
+		font-size: 0.95rem;
 	}
 	.actions {
 		display: flex;
 		gap: 0.4rem;
 		flex-wrap: wrap;
-	}
-	.actions button {
-		font-size: 0.8rem;
-		padding: 0.25rem 0.5rem;
-	}
-	button.danger {
-		background: #c92a2a;
 	}
 	.invites {
 		list-style: none;
@@ -165,35 +158,10 @@
 		align-items: center;
 		padding: 0.3rem 0;
 	}
-	.status {
-		font-size: 0.75rem;
-		text-transform: uppercase;
-		padding: 0.15rem 0.45rem;
-		border-radius: 999px;
-	}
-	.status.active {
-		background: #d3f9d8;
-		color: #2b8a3e;
-	}
-	.status.used {
-		background: #e9ecef;
-		color: #495057;
-	}
-	.status.expired {
-		background: #ffe3e3;
-		color: #c92a2a;
-	}
-	.meta {
-		color: #868e96;
-		font-size: 0.8rem;
-	}
 	.invite code {
 		word-break: break-all;
-		background: #f1f3f5;
+		background: var(--surface-2);
 		padding: 0.2rem 0.4rem;
-		border-radius: 6px;
-	}
-	.error {
-		color: #c92a2a;
+		border-radius: var(--radius-sm);
 	}
 </style>

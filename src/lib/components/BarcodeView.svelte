@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import Barcode from './Barcode.svelte';
+	import Icon from './Icon.svelte';
 	import { t } from '$lib/i18n.svelte';
 	import type { Card } from '$lib/types';
 
@@ -70,8 +71,12 @@
 	<div class="head">
 		<h2>{card.comment || card.name}</h2>
 		<div class="head-actions">
-			<button class="fs" title={t('fullscreen')} onclick={toggleFullscreen}>⛶</button>
-			<button class="close" aria-label={t('close')} title={t('close')} onclick={onclose}>✕</button>
+			<button class="icon-btn" title={t('fullscreen')} aria-label={t('fullscreen')} onclick={toggleFullscreen}>
+				<Icon name="fullscreen" />
+			</button>
+			<button class="icon-btn" aria-label={t('close')} title={t('close')} onclick={onclose}>
+				<Icon name="close" />
+			</button>
 		</div>
 	</div>
 	<div class="barcode">
@@ -84,15 +89,20 @@
 </div>
 
 <style>
+	/* Checkout surface stays white in both themes: max contrast for the reader. */
 	.fullscreen {
 		position: fixed;
 		inset: 0;
 		background: #ffffff;
 		color: #000;
-		z-index: 100;
+		z-index: var(--z-fullscreen);
 		display: flex;
 		flex-direction: column;
-		padding: 1rem;
+		padding: calc(1rem + var(--safe-t)) 1rem calc(1rem + var(--safe-b));
+	}
+	.fullscreen .icon-btn {
+		background: #e9ecef;
+		color: #000;
 	}
 	.head {
 		display: flex;
@@ -101,19 +111,11 @@
 	}
 	.head h2 {
 		margin: 0;
-		font-size: 1.1rem;
+		font-size: 1.15rem;
 	}
 	.head-actions {
 		display: flex;
 		gap: 0.4rem;
-	}
-	.fs {
-		background: #e9ecef;
-		font-size: 1rem;
-	}
-	.close {
-		background: #e9ecef;
-		font-size: 1rem;
 	}
 	.barcode {
 		flex: 1;
@@ -128,20 +130,21 @@
 		width: auto;
 	}
 	.hint {
-		font-size: 0.75rem;
-		color: #666;
+		font-size: 0.9rem;
+		color: #555;
 		text-align: center;
 	}
 	.toast {
 		position: fixed;
 		left: 50%;
-		bottom: 1.25rem;
+		bottom: calc(1.25rem + var(--safe-b));
 		transform: translateX(-50%);
 		background: #212529;
 		color: white;
-		border-radius: 10px;
+		border-radius: var(--radius-sm);
 		padding: 0.6rem 0.9rem;
-		font-size: 0.85rem;
+		font-size: 0.9rem;
 		max-width: 90%;
+		z-index: calc(var(--z-fullscreen) + 1);
 	}
 </style>
