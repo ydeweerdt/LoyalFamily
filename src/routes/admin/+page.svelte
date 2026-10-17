@@ -17,6 +17,7 @@
 	let invites = $state<InviteRow[]>([]);
 	let errorMsg = $state('');
 	let newInviteUrl = $state('');
+	let newInviteId = $state('');
 	type ActionKind = 'menu' | 'role' | 'reset' | 'delete';
 	let action = $state<{ user: PublicUser; kind: ActionKind } | null>(null);
 	let newPassword = $state('');
@@ -54,6 +55,7 @@
 		const r = await fetch('/api/admin/invites', { method: 'POST', credentials: 'same-origin' });
 		if (!r.ok) return void (errorMsg = (await r.json()).error);
 		const invite = await r.json();
+		newInviteId = invite.id;
 		newInviteUrl = `${location.origin}/join/${invite.token}`;
 		await load();
 	}
@@ -69,7 +71,10 @@
 	}
 
 	async function revoke(id: string) {
-		if (await api(`/api/admin/invites/${id}`, 'DELETE')) await load();
+		if (await api(`/api/admin/invites/${id}`, 'DELETE')) {
+			if (id === newInviteId) (newInviteId = '', newInviteUrl = '');
+			await load();
+		}
 	}
 
 	/* confirm()/prompt() replaced by an in-page action sheet */
