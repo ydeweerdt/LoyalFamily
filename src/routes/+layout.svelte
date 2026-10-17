@@ -282,6 +282,31 @@
 		color: var(--brand-ink);
 		z-index: var(--z-menu);
 	}
+	:global(.card) {
+		border: 1px solid var(--line);
+		border-radius: var(--radius);
+		padding: 0.75rem 1rem;
+		margin: 1rem 0;
+	}
+	:global(.list-row) {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.5rem 0;
+		border-bottom: 1px solid var(--line);
+	}
+	:global(.list-row:last-child) {
+		border-bottom: none;
+	}
+	:global(.list-row .meta) {
+		flex: 1;
+	}
+	:global(.sheet-actions) {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 0.75rem;
+	}
 	@media (prefers-reduced-motion: reduce) {
 		:global(.sheet) {
 			animation: none;

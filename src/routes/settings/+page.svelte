@@ -82,42 +82,48 @@
 {:else}
 	<h1>{t('settings')}</h1>
 
-	<h2>{t('language')}</h2>
-	<select
-		class="field"
-		value={langSel}
-		onchange={(e) => {
-			langSel = (e.target as HTMLSelectElement).value;
-			setLang(langSel as 'auto' | 'nl' | 'en');
-		}}
-	>
-		<option value="auto">{t('lang_auto')}</option>
-		<option value="nl">Nederlands</option>
-		<option value="en">English</option>
-	</select>
+	<section class="card">
+		<h2>{t('language')}</h2>
+		<select
+			class="field"
+			value={langSel}
+			onchange={(e) => {
+				langSel = (e.target as HTMLSelectElement).value;
+				setLang(langSel as 'auto' | 'nl' | 'en');
+			}}
+		>
+			<option value="auto">{t('lang_auto')}</option>
+			<option value="nl">Nederlands</option>
+			<option value="en">English</option>
+		</select>
+	</section>
 
-	<h2>{t('backup')}</h2>
-	<div class="row">
-		<button class="btn btn-primary" onclick={downloadExport}>{t('export_btn')}</button>
-		<label class="file">
-			{t('import_btn')}
-			<input type="file" accept=".json,application/json" onchange={importFile} />
-		</label>
-	</div>
-	{#if ioMsg}<p class={isErrorIo ? 'error' : 'ok'}>{ioMsg}</p>{/if}
+	<section class="card">
+		<h2>{t('backup')}</h2>
+		<div class="row">
+			<button class="btn btn-primary" onclick={downloadExport}>{t('export_btn')}</button>
+			<label class="file">
+				{t('import_btn')}
+				<input type="file" accept=".json,application/json" onchange={importFile} />
+			</label>
+		</div>
+		{#if ioMsg}<p class={isErrorIo ? 'error' : 'ok'}>{ioMsg}</p>{/if}
+	</section>
 
-	<h2>{t('change_password')}</h2>
-	<form
-		onsubmit={(e) => {
-			e.preventDefault();
-			change();
-		}}
-	>
-		<label class="field-label">{t('current_password')} <input class="field" name="current_password" type="password" bind:value={current} required autocomplete="current-password" /></label>
-		<label class="field-label">{t('new_password')} <input class="field" name="new_password" type="password" bind:value={next} required minlength={8} autocomplete="new-password" /></label>
-		<button class="btn btn-primary">{t('change_password')}</button>
-	</form>
-	{#if msg}<p class={isError ? 'error' : 'ok'}>{msg}</p>{/if}
+	<section class="card">
+		<h2>{t('change_password')}</h2>
+		<form
+			onsubmit={(e) => {
+				e.preventDefault();
+				change();
+			}}
+		>
+			<label class="field-label">{t('current_password')} <input class="field" name="current_password" type="password" bind:value={current} required autocomplete="current-password" /></label>
+			<label class="field-label">{t('new_password')} <input class="field" name="new_password" type="password" bind:value={next} required minlength={8} autocomplete="new-password" /></label>
+			<button class="btn btn-primary">{t('change_password')}</button>
+		</form>
+		{#if msg}<p class={isError ? 'error' : 'ok'}>{msg}</p>{/if}
+	</section>
 {/if}
 
 <style>

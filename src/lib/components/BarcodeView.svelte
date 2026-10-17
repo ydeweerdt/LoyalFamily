@@ -82,6 +82,7 @@
 	<div class="barcode">
 		<Barcode value={card.barcode_value} symbology={card.symbology} height={140} />
 	</div>
+	<p class="value mono">{card.barcode_value}</p>
 	<p class="hint">{t('brightness_tip')}</p>
 	{#if showToast}
 		<div class="toast" role="status">{t('brightness_toast')}</div>
@@ -128,6 +129,16 @@
 		max-width: 100%;
 		max-height: 100%;
 		width: auto;
+	}
+	/* human-readable value: the renderer draws bars only, staff can type it if the optical read fails */
+	.value {
+		font-size: 1rem;
+		text-align: center;
+		margin: 0 auto 0.5rem;
+		max-width: 92%;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.hint {
 		font-size: 0.95rem;

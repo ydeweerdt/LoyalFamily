@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import Icon from '$lib/components/Icon.svelte';
 	import { refreshSession, session } from '$lib/stores/session';
 	import { t, tf } from '$lib/i18n.svelte';
 	import type { PublicUser } from '$lib/types';
@@ -16,6 +17,9 @@
 	let invites = $state<InviteRow[]>([]);
 	let errorMsg = $state('');
 	let newInviteUrl = $state('');
+	type ActionKind = 'menu' | 'role' | 'reset' | 'delete';
+	let action = $state<{ user: PublicUser; kind: ActionKind } | null>(null);
+	let newPassword = $state('');
 
 	const isAdmin = $derived($session.user?.role === 'admin');
 
@@ -58,27 +62,27 @@
 		if (await api(`/api/admin/invites/${id}`, 'DELETE')) await load();
 	}
 
-	async function toggleRole(u: PublicUser) {
-		const role = u.role === 'admin' ? 'user' : 'admin';
-		if (!confirm(tf(role === 'admin' ? 'confirm_demote' : 'confirm_promote', { name: u.display_name }))) return;
-		if (await api(`/api/admin/users/${u.id}`, 'PUT', { role })) await load();
+	/* confirm()/prompt() replaced by an in-page action sheet */
+	async function runAction() {
+		if (!action) return;
+		const u = action.user;
+		const ok =
+			action.kind === 'role'
+				? await api(`/api/admin/users/${u.id}`, 'PUT', { role: u.role === 'admin' ? 'user' : 'admin' })
+				: action.kind === 'reset'
+					? await api(`/api/admin/users/${u.id}/password`, 'PUT', { password: newPassword })
+					: await api(`/api/admin/users/${u.id}`, 'DELETE');
+			if (!ok && action.kind === 'reset') return; // keep the sheet open so the error is fixable
+		newPassword = '';
+		action = null;
+		if (ok) await load();
 	}
-
-	async function resetPassword(u: PublicUser) {
-		const password = prompt(tf('prompt_password', { name: u.display_name }));
-		if (!password) return;
-		if (await api(`/api/admin/users/${u.id}/password`, 'PUT', { password })) await load();
-	}
-
-	async function removeUser(u: PublicUser) {
-		if (!confirm(tf('confirm_delete', { name: u.display_name }))) return;
-		if (await api(`/api/admin/users/${u.id}`, 'DELETE')) await load();
-	}
-
 	function inviteStatus(i: InviteRow): string {
 		return i.used_at ? t('status_used') : i.expired ? t('status_expired') : t('status_active');
 	}
 </script>
+
+<svelte:window onkeydown={(e) => e.key === 'Escape' && (action = null)} />
 
 {#if !$session.user}
 	<p><a href="/login">{t('sign_in_first')}</a></p>
@@ -89,75 +93,72 @@
 
 	{#if errorMsg}<p class="error">{errorMsg}</p>{/if}
 
-	<h2>{t('invite_people')}</h2>
-	<button class="btn btn-primary" onclick={createInvite}>{t('create_invite')}</button>
-	{#if newInviteUrl}
-		<p class="invite">{t('invite_share')}<br />
-			<code>{newInviteUrl}</code></p>
-	{/if}
-	<ul class="invites">
-		{#if invites.length === 0}<li class="meta">{t('no_invites')}</li>{/if}
+	<section class="card">
+		<h2>{t('invite_people')}</h2>
+		<button class="btn btn-primary" onclick={createInvite}>{t('create_invite')}</button>
+		{#if newInviteUrl}
+			<p class="invite">{t('invite_share')}<br />
+				<code>{newInviteUrl}</code></p>
+		{/if}
+		{#if invites.length === 0}<p class="meta">{t('no_invites')}</p>{/if}
 		{#each invites as i (i.id)}
-			<li>
+			<div class="list-row">
 				<span class="chip {i.used_at ? '' : i.expired ? 'chip-danger' : 'chip-ok'}">{inviteStatus(i)}</span>
 				<span class="meta">{tf('expires', { date: i.expires_at.slice(0, 10) })}</span>
 				{#if !i.used_at && !i.expired}<button class="btn btn-danger" onclick={() => revoke(i.id)}>{t('revoke')}</button>{/if}
-			</li>
+			</div>
 		{/each}
-	</ul>
+	</section>
 
-	<h2>{t('people')}</h2>
-	<table>
-		<thead>
-			<tr><th>{t('name')}</th><th>{t('username')}</th><th>{t('role')}</th><th></th></tr>
-		</thead>
-		<tbody>
-			{#each users as u (u.id)}
-				<tr>
-					<td>{u.display_name}</td>
-					<td>{u.username}</td>
-					<td>{u.role === 'admin' ? t('role_admin') : t('role_user')}</td>
-					<td class="actions">
-						<button class="btn" onclick={() => toggleRole(u)}>{u.role === 'admin' ? t('demote') : t('promote')}</button>
-						<button class="btn" onclick={() => resetPassword(u)}>{t('reset_password')}</button>
-						{#if u.id !== $session.user?.id}
-							<button class="btn btn-danger" onclick={() => removeUser(u)}>{t('delete')}</button>
-						{/if}
-					</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
+	<section class="card">
+		<h2>{t('people')}</h2>
+		{#each users as u (u.id)}
+			<div class="list-row">
+				<span>{u.display_name}</span>
+				<span class="meta">@{u.username} · {u.role === 'admin' ? t('role_admin') : t('role_user')}</span>
+				<button class="icon-btn" aria-label={t('actions')} title={t('actions')} onclick={() => (action = { user: u, kind: 'menu' })}>
+					<Icon name="more" />
+				</button>
+			</div>
+		{/each}
+	</section>
+
+	{#if action}
+		{@const a = action}
+		<button class="scrim" aria-label={t('close')} onclick={() => (action = null)}></button>
+		<div class="sheet" role="dialog" aria-modal="true" aria-label={t('actions')}>
+			<h2>{a.user.display_name}</h2>
+			<p class="meta">@{a.user.username} · {a.user.role === 'admin' ? t('role_admin') : t('role_user')}</p>
+			{#if a.kind === 'menu'}
+				<div class="sheet-actions">
+					<button class="btn" onclick={() => (action = { user: a.user, kind: 'role' })}>{a.user.role === 'admin' ? t('demote') : t('promote')}</button>
+					<button class="btn" onclick={() => (action = { user: a.user, kind: 'reset' })}>{t('reset_password')}</button>
+					{#if a.user.id !== $session.user?.id}
+						<button class="btn btn-danger" onclick={() => (action = { user: a.user, kind: 'delete' })}>{t('delete')}</button>
+					{/if}
+					<button class="btn" onclick={() => (action = null)}>{t('cancel')}</button>
+				</div>
+			{:else}
+				<p>
+					{a.kind === 'reset'
+						? tf('prompt_password', { name: a.user.display_name })
+						: tf(a.kind === 'delete' ? 'confirm_delete' : a.user.role === 'admin' ? 'confirm_demote' : 'confirm_promote', { name: a.user.display_name })}
+				</p>
+				{#if a.kind === 'reset'}
+					<label class="field-label">{t('new_password')} <input class="field" type="password" minlength={8} bind:value={newPassword} autocomplete="new-password" /></label>
+				{/if}
+				<div class="sheet-actions">
+					<button class="btn btn-primary" onclick={runAction}>
+						{a.kind === 'reset' ? t('save') : a.kind === 'delete' ? t('delete') : a.user.role === 'admin' ? t('demote') : t('promote')}
+					</button>
+					<button class="btn" onclick={() => (action = null)}>{t('cancel')}</button>
+				</div>
+			{/if}
+		</div>
+	{/if}
 {/if}
 
 <style>
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		margin-top: 0.5rem;
-	}
-	th, td {
-		text-align: left;
-		padding: 0.5rem;
-		border-bottom: 1px solid var(--line);
-		font-size: 0.95rem;
-	}
-	.actions {
-		display: flex;
-		gap: 0.4rem;
-		flex-wrap: wrap;
-	}
-	.invites {
-		list-style: none;
-		padding: 0;
-		margin: 0.75rem 0 1.25rem;
-	}
-	.invites li {
-		display: flex;
-		gap: 0.6rem;
-		align-items: center;
-		padding: 0.3rem 0;
-	}
 	.invite code {
 		word-break: break-all;
 		background: var(--surface-2);

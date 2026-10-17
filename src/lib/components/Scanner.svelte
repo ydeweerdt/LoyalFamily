@@ -26,6 +26,9 @@
 	let videoEl = $state<HTMLVideoElement | undefined>();
 	let status = $state(t('requesting_camera'));
 	let stream: MediaStream | undefined;
+	let track: MediaStreamTrack | undefined;
+	let canTorch = $state(false);
+	let torchOn = $state(false);
 	let reader: BrowserMultiFormatReader | undefined;
 	let timer: ReturnType<typeof setInterval> | undefined;
 	let done = false;
@@ -35,7 +38,17 @@
 		if (done) return;
 		done = true;
 		stop();
+		navigator.vibrate?.(60); // haptic confirmation: the read landed, the camera can go back in a pocket
 		ondetect(value, symbology);
+	}
+
+	async function toggleTorch() {
+		torchOn = !torchOn;
+		try {
+			await track?.applyConstraints({ advanced: [{ torch: torchOn } as MediaTrackConstraintSet] });
+		} catch {
+			torchOn = false;
+		}
 	}
 
 	function stop() {
@@ -56,6 +69,8 @@
 		if (done || !videoEl) return;
 		videoEl.srcObject = stream;
 		await videoEl.play().catch(() => {});
+		track = stream.getVideoTracks()[0];
+		canTorch = Boolean((track?.getCapabilities?.() as Record<string, unknown> | undefined)?.torch);
 
 		const formats = orderedFormats(symbologyHint);
 
@@ -103,9 +118,12 @@
 		<Icon name="back" size={24} />
 	</button>
 	<video bind:this={videoEl} playsinline muted autoplay></video>
-	<div class="frame" aria-hidden="true"></div>
+	<div class="frame" aria-hidden="true"><div class="scanline"></div></div>
 	<p class="status">{status}</p>
 	<div class="controls">
+		{#if canTorch}
+			<button class="btn {torchOn ? 'on' : ''}" aria-pressed={torchOn} onclick={toggleTorch}><Icon name="torch" /> {t('torch')}</button>
+		{/if}
 		<button class="btn" onclick={onmanual}>{t('manual')}</button>
 	</div>
 </div>
@@ -153,6 +171,28 @@
 		box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
 		pointer-events: none;
 	}
+	.scanline {
+		position: absolute;
+		left: 6%;
+		right: 6%;
+		height: 2px;
+		background: rgba(255, 255, 255, 0.9);
+		animation: scan 1.8s ease-in-out infinite;
+	}
+	@keyframes scan {
+		from {
+			top: 6%;
+		}
+		to {
+			top: 92%;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.scanline {
+			animation: none;
+			top: 50%;
+		}
+	}
 	.status {
 		color: #fff;
 		text-align: center;
@@ -163,5 +203,10 @@
 		padding: 0.75rem 0.75rem calc(0.75rem + var(--safe-b));
 		display: flex;
 		justify-content: center;
+		gap: 0.5rem;
+	}
+	.controls .btn.on {
+		background: var(--brand);
+		color: var(--brand-ink);
 	}
 </style>

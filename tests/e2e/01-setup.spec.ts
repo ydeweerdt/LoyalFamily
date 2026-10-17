@@ -49,7 +49,26 @@ test('first registered user becomes admin; others need an invite', async ({ brow
 	await adminPage.reload();
 	await openMenu(adminPage);
 	await adminPage.getByRole('link', { name: 'Admin' }).click();
-	await expect(adminPage.getByRole('cell', { name: 'mama', exact: true })).toBeVisible();
+	await expect(adminPage.locator('.list-row', { hasText: '@mama' })).toBeVisible();
+
+	// member management happens in an in-page action sheet, not confirm()/prompt()
+	await adminPage.locator('.list-row', { hasText: '@mama' }).getByRole('button', { name: 'Actions' }).click();
+	const sheet = adminPage.getByRole('dialog', { name: 'Actions' });
+	await expect(sheet).toBeVisible();
+	await sheet.getByRole('button', { name: 'reset password' }).click();
+	await expect(sheet.locator('input[type="password"]')).toBeVisible();
+	await sheet.getByRole('button', { name: 'Cancel' }).click();
+	await expect(sheet).toBeHidden();
+
+	await adminPage.locator('.list-row', { hasText: '@mama' }).getByRole('button', { name: 'Actions' }).click();
+	await sheet.getByRole('button', { name: 'promote' }).click();
+	await sheet.getByRole('button', { name: 'promote' }).click(); // confirm step
+	await expect(adminPage.locator('.list-row', { hasText: '@mama · admin' })).toBeVisible();
+	// back to member: the other two users in later flows must stay non-admin
+	await adminPage.locator('.list-row', { hasText: '@mama' }).getByRole('button', { name: 'Actions' }).click();
+	await sheet.getByRole('button', { name: 'demote' }).click();
+	await sheet.getByRole('button', { name: 'demote' }).click();
+	await expect(adminPage.locator('.list-row', { hasText: '@mama · user' })).toBeVisible();
 
 	// the invite link is single-use
 	const reuse = await browser.newPage();
