@@ -40,8 +40,10 @@ jobs:
       - uses: docker/build-push-action@v7
         with:
           push: true
+          # hardcoded lowercase: GHCR rejects repo names with capitals and
+          # Actions expressions have no tolower()
           tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/ydeweerdt/loyalfamily:latest
+            ghcr.io/ydeweerdt/loyalfamily:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
