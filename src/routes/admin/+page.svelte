@@ -58,6 +58,16 @@
 		await load();
 	}
 
+	/** Create a fresh invite and hand the link straight to the mail client. */
+	async function sendInvite() {
+		errorMsg = '';
+		const r = await fetch('/api/admin/invites', { method: 'POST', credentials: 'same-origin' });
+		if (!r.ok) return void (errorMsg = (await r.json()).error);
+		const invite = await r.json();
+		await load();
+		location.href = mailtoHref(`${location.origin}/join/${invite.token}`);
+	}
+
 	async function revoke(id: string) {
 		if (await api(`/api/admin/invites/${id}`, 'DELETE')) await load();
 	}
@@ -77,6 +87,10 @@
 		action = null;
 		if (ok) await load();
 	}
+	function mailtoHref(url: string): string {
+		return `mailto:?subject=${encodeURIComponent(t('invite_email_subject'))}&body=${encodeURIComponent(tf('invite_email_body', { url }))}`;
+	}
+
 	function inviteStatus(i: InviteRow): string {
 		return i.used_at ? t('status_used') : i.expired ? t('status_expired') : t('status_active');
 	}
@@ -95,7 +109,10 @@
 
 	<section class="card">
 		<h2>{t('invite_people')}</h2>
-		<button class="btn btn-primary" onclick={createInvite}>{t('create_invite')}</button>
+		<div class="sheet-actions">
+			<button class="btn btn-primary" onclick={createInvite}>{t('create_invite')}</button>
+			<button class="btn btn-primary" onclick={sendInvite}>{t('send_invite_email')}</button>
+		</div>
 		{#if newInviteUrl}
 			<p class="invite">{t('invite_share')}<br />
 				<code>{newInviteUrl}</code></p>
