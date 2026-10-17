@@ -9,8 +9,8 @@ Requirements: see [REQUIREMENTS.md](REQUIREMENTS.md). Stack: SvelteKit (adapter-
 [Login / Register / Join-via-invite]
         │
    [Home grid]──────────────────────┐  continuous scroll, alphabetical brand tiles,
-        │                           │  count badge, 🔒 on own private cards
-        │ tap "+"                   │
+        │                           │  count badge, lock icon on own private cards
+        │ tap FAB (56px)            │
    [Brand picker] (logo grid + search + "Unknown")
         │ pick brand                │
    [Scanner] (camera; manual-entry fallback link)
@@ -22,8 +22,8 @@ Requirements: see [REQUIREMENTS.md](REQUIREMENTS.md). Stack: SvelteKit (adapter-
         │ tap tile (1 card)         → [Barcode view] fullscreen, wake lock, white max-contrast
         │ tap tile (multi card)     → [Brand tile view: grid of card tiles] → tap card tile → [Barcode view]
         │ long-press tile / card tile → [Card edit] (owner only; delete inside edit)
-        │ menu                      → [Admin] users (roles, password reset, remove),
-        │                             invites, delete-any-card
+        │ menu                      → [Admin] users (list rows + per-user action
+        │                             sheet: role, password reset, remove), invites
 ```
 
 Offline: everything above works except brand-picker is local data (bundled),
@@ -336,7 +336,30 @@ rollback decisions easy.
 12. ✅ Sync invariants: full pull never discards unflushed local mutations; rejected
     ops are counted and shown instead of silently dropped
 
-## 10. Not yet true (do not trust the ✅ above for these)
+## 11. UI design system
+
+One design layer, no per-screen styling. Everything lives in `+layout.svelte` as
+`:global()` tokens + shared classes; screens compose them and add layout only.
+
+- **Tokens** (`:root`): `--brand*`, `--surface`, `--surface-2`, `--line`, `--text*`,
+  `--danger*`, `--ok`, `--warn`, radii, `--z-nav/menu/modal`, `--safe-t/-b/-r`.
+  Dark values come from `@media (prefers-color-scheme: dark)` — never per component.
+- **Shared classes**: `.btn` (`.btn-primary`, `.btn-danger`), `.icon-btn` (44×44),
+  `.field` / `.field-label`, `.chip`, `.grid` / `.tile` / `.badge`, `.card`, `.list-row`,
+  `.scrim` / `.sheet` / `.sheet-actions`, `.fab`, `.error` / `.ok` / `.warn` / `.meta`.
+  A new screen reuses these; it does not redeclare a color or a button.
+- **Overlays** are bottom sheets (Catima-style): `.scrim` (a real `<button>`) + `.sheet`
+  with `role="dialog" aria-modal="true"`, 180ms slide-up, Escape and scrim click close,
+  background scroll locked, focus moved into the sheet. `confirm()` / `prompt()` are not used.
+- **Tile ink** is computed, not hardcoded: `inkOn(color)` in `lib/brands.ts` picks white or
+  `#111` by WCAG relative luminance (crossover 0.19) so every brand color keeps ≥3:1.
+- **Icons** are SVG paths in `Icon.svelte`. No emoji or full-width glyphs as icons.
+- **Text floor**: nothing below ~14px effective (labels/meta 0.9rem, badge/chip 0.8rem).
+- **Motion**: transitions 120–180ms, all disabled under `prefers-reduced-motion`.
+- **Fixed exceptions**: the checkout barcode view and the scanner keep hardcoded white/black —
+  they must stay max-contrast regardless of the OS theme.
+
+## 12. Not yet true (do not trust the ✅ above for these)
 
 - **No real-device verification.** Wake lock, fullscreen, camera scanning and the
   ZXing-WASM fallback on Android Chrome / iOS Safari / Firefox are untested —
