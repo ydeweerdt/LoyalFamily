@@ -26,7 +26,7 @@ beforeEach(() => {
 function asReq(userId: string, method: string, url: string, body?: unknown): Request {
 	return new Request(`http://localhost${url}`, {
 		method,
-		headers: { 'content-type': 'application/json', cookie: `session=${createSessionToken(userId)}` },
+		headers: { 'content-type': 'application/json', cookie: `session=${createSessionToken(userId, 0)}` },
 		body: body === undefined ? undefined : JSON.stringify(body)
 	});
 }
@@ -86,7 +86,7 @@ describe('offline queue replay against the real API (golden flow)', () => {
 		expect((await pull()).map((c) => c.id)).not.toContain(ID1); // still offline
 
 		const res = await flushQueue(q, handlerTransport(alice));
-		expect(res).toEqual({ flushed: 1, queued: 0 });
+		expect(res).toEqual({ flushed: 1, queued: 0, dropped: 0 });
 		expect((await pull()).map((c) => c.id)).toContain(ID1);
 	});
 
@@ -121,7 +121,7 @@ describe('offline queue replay against the real API (golden flow)', () => {
 		await q.add({ id: 'q2', card_id: ID2, op: 'create', payload: cardPayload, ts: 2 });
 
 		const res = await flushQueue(q, handlerTransport(alice));
-		expect(res).toEqual({ flushed: 1, queued: 0 });
+		expect(res).toEqual({ flushed: 1, queued: 0, dropped: 1 }); // dropped count is what the UI shows as "could not be saved"
 		expect((await pull()).map((c) => c.id)).toEqual([ID2]);
 	});
 

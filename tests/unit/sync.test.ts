@@ -60,7 +60,7 @@ describe('flushQueue (replay semantics)', () => {
 		const q = memQueue([op('a', 'create'), op('b', 'delete')]);
 		const t: Transport = { send: async () => ({ ok: true, retry: false }) };
 		const res = await flushQueue(q, t);
-		expect(res).toEqual({ flushed: 2, queued: 0 });
+		expect(res).toEqual({ flushed: 2, queued: 0, dropped: 0 });
 		expect(q.ops.length).toBe(0);
 	});
 
@@ -75,7 +75,7 @@ describe('flushQueue (replay semantics)', () => {
 		};
 		const res = await flushQueue(q, t);
 		expect(sent).toEqual(['a']); // b and c were NOT attempted behind a failed op
-		expect(res).toEqual({ flushed: 0, queued: 3 });
+		expect(res).toEqual({ flushed: 0, queued: 3, dropped: 0 });
 		expect(q.ops.length).toBe(3);
 	});
 
@@ -85,7 +85,7 @@ describe('flushQueue (replay semantics)', () => {
 			send: async (o) => (o.card_id === 'a' ? { ok: false, retry: false } : { ok: true, retry: false })
 		};
 		const res = await flushQueue(q, t);
-		expect(res).toEqual({ flushed: 1, queued: 0 });
+		expect(res).toEqual({ flushed: 1, queued: 0, dropped: 1 });
 		expect(q.ops.length).toBe(0); // invalid op discarded; pull will show server truth
 	});
 

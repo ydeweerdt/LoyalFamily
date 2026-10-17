@@ -29,7 +29,7 @@ export async function registerHandler(request: Request): Promise<Response> {
 		passwordHash: await hashPassword(password),
 		role: 'admin'
 	});
-	return json(user, 201, { 'set-cookie': sessionCookieHeader(createSessionToken(user.id)) });
+	return json(user, 201, { 'set-cookie': sessionCookieHeader(createSessionToken(user.id, 0)) }); // new user: token_version 0
 }
 
 export async function loginHandler(request: Request): Promise<Response> {
@@ -43,7 +43,7 @@ export async function loginHandler(request: Request): Promise<Response> {
 		return error('invalid username or password', 401);
 	}
 	return json(toPublicUser(user), 200, {
-		'set-cookie': sessionCookieHeader(createSessionToken(user.id))
+		'set-cookie': sessionCookieHeader(createSessionToken(user.id, user.token_version))
 	});
 }
 

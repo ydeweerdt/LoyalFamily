@@ -23,7 +23,7 @@ function asReq(userId: string, method: string, url: string, body?: unknown): Req
 		method,
 		headers: {
 			'content-type': 'application/json',
-			cookie: `session=${createSessionToken(userId)}`
+			cookie: `session=${createSessionToken(userId, 0)}`
 		},
 		body: body === undefined ? undefined : JSON.stringify(body)
 	});

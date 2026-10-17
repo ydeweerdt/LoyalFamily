@@ -15,6 +15,7 @@ import {
 	usersListHandler
 } from '$lib/server/admin_handlers';
 import { createInvite, getInviteByToken } from '$lib/server/invites';
+import { applyAdminReset } from '$lib/server/bootstrap';
 
 let admin: string, alice: string;
 
@@ -29,14 +30,15 @@ function req(userId: string | null, method: string, url: string, body?: unknown)
 		method,
 		headers: {
 			'content-type': 'application/json',
-			...(userId ? { cookie: `session=${createSessionToken(userId)}` } : {})
+			...(userId ? { cookie: `session=${createSessionToken(userId, getUser(userId)?.token_version ?? 0)}` } : {})
 		},
 		body: body === undefined ? undefined : JSON.stringify(body)
 	});
 }
 
 async function cookieOf(userId: string): Promise<string> {
-	return `session=${createSessionToken(userId)}`;
+	// minted against the user's CURRENT token_version; mint one before a bump to get a stale cookie
+	return `session=${createSessionToken(userId, getUser(userId)?.token_version ?? 0)}`;
 }
 
 describe('invites (REQUIREMENTS §7: single-use, expiring, no email)', () => {
@@ -225,5 +227,75 @@ describe('self-service password change', () => {
 			})
 		);
 		expect(res.status).toBe(200);
+	});
+});
+
+describe('session revocation (REQUIREMENTS §7: remove/demote/password-reset ends sessions)', () => {
+	const as = (cookie: string) => cardsListHandler(new Request('http://localhost/api/cards', { headers: { cookie } }));
+
+	it('admin password reset invalidates cookies issued before it', async () => {
+		const cookie = await cookieOf(alice);
+		expect((await as(cookie)).status).toBe(200);
+		expect((await adminResetPasswordHandler(req(admin, 'PUT', `/api/admin/users/${alice}/password`, { password: 'brandnew123' }), alice)).status).toBe(200);
+		expect((await as(cookie)).status).toBe(401);
+	});
+
+	it('role changes invalidate the affected user\'s cookies', async () => {
+		const adminCookie = await cookieOf(admin);
+		const aliceCookie = await cookieOf(alice);
+		expect((await as(aliceCookie)).status).toBe(200);
+
+		expect((await setRoleHandler(req(admin, 'PUT', `/api/admin/users/${alice}`, { role: 'admin' }), alice)).status).toBe(200);
+		expect((await as(aliceCookie)).status).toBe(401); // promoted → logged out everywhere
+
+		expect((await setRoleHandler(req(admin, 'PUT', `/api/admin/users/${admin}`, { role: 'user' }), admin)).status).toBe(200);
+		expect((await as(adminCookie)).status).toBe(401); // demoted → logged out everywhere
+	});
+
+	it('deleting a user invalidates their cookie', async () => {
+		const cookie = await cookieOf(alice);
+		expect((await as(cookie)).status).toBe(200);
+		expect((await deleteUserHandler(req(admin, 'DELETE', `/api/admin/users/${alice}`), alice)).status).toBe(200);
+		expect((await as(cookie)).status).toBe(401);
+	});
+
+	it('changing your own password keeps this device signed in and kills the old cookie', async () => {
+		const { hashPassword, setPasswordHash } = await import('$lib/server/users');
+		await setPasswordHash(alice, await hashPassword('oldpassword1'));
+		const oldCookie = await cookieOf(alice);
+
+		const res = await changePasswordHandler(
+			new Request('http://localhost/api/me/password', {
+				method: 'PUT',
+				headers: { cookie: oldCookie, 'content-type': 'application/json' },
+				body: JSON.stringify({ current_password: 'oldpassword1', new_password: 'newpassword1' })
+			})
+		);
+		expect(res.status).toBe(200);
+
+		const newCookie = (res.headers.get('set-cookie') ?? '').split(';')[0];
+		expect(newCookie).toMatch(/^session=.+\./);
+		expect((await as(oldCookie)).status).toBe(401);
+		expect((await as(newCookie)).status).toBe(200);
+	});
+});
+
+describe('break-glass admin reset (REQUIREMENTS §7: no email recovery exists)', () => {
+	it('RESET_ADMIN + RESET_ADMIN_PASSWORD resets that user\'s password at startup', async () => {
+		process.env.RESET_ADMIN = 'alice';
+		process.env.RESET_ADMIN_PASSWORD = 'recovered123';
+		try {
+			applyAdminReset();
+			const { verifyPassword } = await import('$lib/server/users');
+			expect(await verifyPassword(findByUsername('alice')!.password_hash, 'recovered123')).toBe(true);
+
+			process.env.RESET_ADMIN = 'ghost'; // unknown username → no-op, no crash
+			applyAdminReset();
+			expect(findByUsername('alice')).toBeDefined();
+			expect(await verifyPassword(findByUsername('alice')!.password_hash, 'recovered123')).toBe(true);
+		} finally {
+			delete process.env.RESET_ADMIN;
+			delete process.env.RESET_ADMIN_PASSWORD;
+		}
 	});
 });

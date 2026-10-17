@@ -24,10 +24,21 @@ see screenshots at https://play.google.com/store/apps/details?id=me.hackerchick.
 ## Localization
 Can the native language of the phone be detected and the app language modified accordingly?
 
+**Done** — `src/lib/i18n.svelte.ts`: en/nl, auto-detected from the browser/phone
+language, override in Settings (Auto / Nederlands / English), e2e spec 07.
+Remaining: more languages (fr/de) would need a translator, and the brand catalog is
+Belgian-only either way.
+
 # Brand logos
 ## Known brand logos
 Incorporate the logos of the known brands, not only text.
 
 ## Uploading unknown brand logo
 For "Other brand" allow uploading an brand image.
+
+Constraint before this can be built: the image must live **in the database (BLOB)**
+or be bundled in the image — never as a file under `DATA_DIR`. "Backup = copy one
+SQLite file" is a v0.1 promise (REQUIREMENTS §10) and uploaded files on disk break
+it. Uploaded logos also need a size/format limit and re-encoding (downscale, strip
+EXIF). See REQUIREMENTS §14.
 

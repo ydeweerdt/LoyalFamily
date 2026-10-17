@@ -17,10 +17,13 @@ export function error(message: string, status: number): Response {
 export function sessionUser(request: Request): PublicUser | null {
 	const token = readSessionToken(request);
 	if (!token) return null;
-	const uid = verifySessionToken(token);
-	if (!uid) return null;
-	const user = getUser(uid);
-	return user ? toPublicUser(user) : null;
+	const sess = verifySessionToken(token);
+	if (!sess) return null;
+	const user = getUser(sess.uid);
+	// per-user token_version: bumping it revokes every cookie issued earlier
+	// (REQUIREMENTS §7 — remove/demote/password-reset ends sessions immediately)
+	if (!user || user.token_version !== sess.tokenVersion) return null;
+	return toPublicUser(user);
 }
 
 /** Returns the user or a ready-to-return 401 response. */

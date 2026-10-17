@@ -2,7 +2,9 @@
  * Client card store: single source of truth for the UI.
  * Mutations: optimistic local update + queued op + immediate send attempt.
  * Network failure → op stays queued, offline flag set, local state already correct.
- * Reconnect / app start → flush queue (FIFO) → full pull reconciles.
+ * Reconnect / app start → flush queue (FIFO) → full pull reconciles; the pull never
+ * discards a card whose mutation is still queued (REQUIREMENTS §6 invariant).
+ * Server rejects an op for good (4xx) → op dropped + `failed` count shown in the UI.
  */
 import { derived, get, writable } from 'svelte/store';
 import { cacheCards, enqueueOp, getCachedCards, getQueuedOps, removeQueuedOps } from '$lib/idb';
@@ -16,6 +18,8 @@ export const cards = writable<Card[]>([]);
 export const offline = writable(false);
 /** number of mutations still queued for the server (shown in the offline banner) */
 export const pending = writable(0);
+/** mutations the server rejected for good (4xx) — never silent (REQUIREMENTS §6) */
+export const failed = writable(0);
 export const tiles = derived([cards, session], ([$cards, $session]) =>
 	$session.user ? buildTiles($cards, $session.user) : []
 );
@@ -30,8 +34,14 @@ async function pull(): Promise<boolean> {
 	const r = await fetch('/api/cards', { credentials: 'same-origin' });
 	if (!r.ok) throw new Error(String(r.status));
 	const list = (await r.json()).cards as Card[];
-	cards.set(list);
-	void cacheCards(list);
+	// invariant (REQUIREMENTS §6): a full pull never discards a local change the
+	// server has not seen yet — cards with unflushed queue ops keep their local version
+	const pendingIds = new Set((await getQueuedOps()).map((o) => o.card_id));
+	const merged = pendingIds.size
+		? [...list.filter((c) => !pendingIds.has(c.id)), ...get(cards).filter((c) => pendingIds.has(c.id))]
+		: list;
+	cards.set(merged);
+	void cacheCards(merged);
 	offline.set(false);
 	return true;
 }
@@ -67,6 +77,7 @@ export async function syncNow(): Promise<void> {
 	syncing = true;
 	try {
 		const res = await flushQueue(queueStore, { send: sendOp });
+		failed.set(res.dropped);
 		try {
 			await pull();
 		} catch {
@@ -87,6 +98,7 @@ async function mutate(op: QueuedOp, optimistic: (list: Card[]) => Card[]): Promi
 	// while offline re-reads stale cache and the local UI loses the change
 	void cacheCards(get(cards));
 	const res = await flushQueue(queueStore, { send: sendOp });
+	failed.set(res.dropped);
 	await refreshPending();
 	if (res.queued > 0) {
 		offline.set(true); // stayed queued — local optimistic state stands
@@ -97,6 +109,7 @@ async function mutate(op: QueuedOp, optimistic: (list: Card[]) => Card[]): Promi
 	} catch {
 		offline.set(true);
 	}
+	if (res.dropped > 0) return { ok: false, error: 'server rejected the change' };
 	return { ok: true };
 }
 

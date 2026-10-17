@@ -1,6 +1,7 @@
 services:
   loyalfamily:
     image: loyalfamily:latest
+    container_name: loyalfamily   # fixed name so `make backup` / docker exec work
     build:
       context: .
     ports:

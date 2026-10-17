@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { hash, verify } from '@node-rs/argon2';
+import { hash, hashSync, verify } from '@node-rs/argon2';
 import { db } from './db';
 import type { PublicUser, User } from '$lib/types';
 
@@ -13,6 +13,11 @@ const ARGON2_OPTIONS = {
 
 export async function hashPassword(password: string): Promise<string> {
 	return hash(password, ARGON2_OPTIONS);
+}
+
+/** For startup code that cannot await (break-glass admin reset). */
+export function hashPasswordSync(password: string): string {
+	return hashSync(password, ARGON2_OPTIONS);
 }
 
 export async function verifyPassword(hashStr: string, password: string): Promise<boolean> {
@@ -70,11 +75,14 @@ export function listUsers(): User[] {
 }
 
 export function setUserRole(id: string, role: 'admin' | 'user'): void {
-	db().prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id);
+	// token_version bump = log the user out everywhere (REQUIREMENTS §7)
+	db().prepare('UPDATE users SET role = ?, token_version = token_version + 1 WHERE id = ?').run(role, id);
 }
 
 export function setPasswordHash(id: string, passwordHash: string): void {
-	db().prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, id);
+	db()
+		.prepare('UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ?')
+		.run(passwordHash, id);
 }
 
 /**

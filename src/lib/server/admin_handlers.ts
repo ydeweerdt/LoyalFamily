@@ -44,7 +44,7 @@ export async function joinHandler(request: Request): Promise<Response> {
 	});
 	redeemInvite(invite.token, user.id);
 
-	return json(user, 201, { 'set-cookie': sessionCookieHeader(createSessionToken(user.id)) });
+	return json(user, 201, { 'set-cookie': sessionCookieHeader(createSessionToken(user.id, 0)) }); // new user: token_version 0
 }
 
 /* ---------- invites (admin) ---------- */
@@ -138,5 +138,7 @@ export async function changePasswordHandler(request: Request): Promise<Response>
 		return error('current password is incorrect', 403);
 	}
 	setPasswordHash(user.id, await hashPassword(String(body.new_password)));
-	return json({ ok: true });
+	// token_version was bumped: other devices are logged out, this one gets a fresh cookie
+	const fresh = getUser(user.id)!;
+	return json({ ok: true }, 200, { 'set-cookie': sessionCookieHeader(createSessionToken(fresh.id, fresh.token_version)) });
 }

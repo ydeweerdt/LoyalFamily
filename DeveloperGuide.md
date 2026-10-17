@@ -11,8 +11,9 @@ no native build tools. Local commands and CI run the *same* container targets.
 make test     # typecheck + lint + unit + integration tests (Docker target `test`)
 make e2e      # Playwright golden flows against the built production app
 make dev      # Vite dev server with hot reload at http://localhost:5173
-make build    # build the production runtime image (loyalfamily:latest)
+make build    # build the production runtime image (loyalfamily:<git-describe> + :latest)
 make run      # build + docker compose up (production shape, http://localhost:3000)
+make backup   # hot SQLite backup inside the running container (UserGuide §5)
 make lock     # regenerate package-lock.json (see §5 — uses --legacy-peer-deps on purpose)
 ```
 
@@ -26,6 +27,7 @@ src/
   lib/
     brands.ts              curated Belgian brand catalog (add brands here)
     types.ts               shared Card/User types
+    i18n.svelte.ts         en/nl strings + browser-language auto-detect
     domain/                PURE TS — no SvelteKit/Node imports (100% unit-testable)
       cards.ts             grid/tile logic, visibility rule, search filter
       validation.ts        pure input rules (uuid, color, EAN-13 checksum, …)
@@ -37,10 +39,12 @@ src/
       migrations/          SQL, applied in order at startup
       users.ts cards.ts invites.ts sessions.ts   repositories
       handlers.ts card_handlers.ts admin_handlers.ts   pure (Request) → Response
+      bootstrap.ts         break-glass admin password reset (RESET_ADMIN env)
     stores/                client-side Svelte stores (cards/session)
     idb.ts                 IndexedDB mirror + mutation queue (offline)
     sync.ts                pure queue coalescing/flush (injectable transport)
     components/            Svelte components (CardForm, Scanner, BarcodeView, …)
+  hooks.server.ts          server boot: applyAdminReset + SIGTERM → close SQLite
   routes/                  SvelteKit routes; api/** are thin +server.ts wrappers
 static/
   sw.js manifest.json icons/   PWA shell (deliberately NOT caching /api/**)
@@ -66,6 +70,11 @@ tests/
    rules are re-checked in handlers (`canEdit`/`canDelete`).
 5. **Card ids are client-generated UUIDs.** Server validates the shape;
    collisions never abort (import mints fresh ids).
+6. **Sessions are revocable via `users.token_version`.** The signed cookie carries
+   it and `sessionUser()` re-checks it on every request. Anything that must kill a
+   session (password change, role change) bumps it in the same UPDATE; deleting the
+   user row kills it too. Never mint a token without the user's current version:
+   `createSessionToken(user.id, user.token_version)`.
 
 ## 4. Running tests
 
@@ -108,9 +117,12 @@ throwaway DB) through the four golden flows from DESIGN §8:
 ```
 tests/e2e/01-setup.spec.ts    empty server → first admin → invite → join → single-use link
           02-card.spec.ts     brand picker → manual entry → tile → full-screen barcode
+                              (+ fake camera → scan path → add form)
           03-offline.spec.ts  offline add → queued → reconnect → server truth
           04-sharing.spec.ts  shared vs private across two users (UI + API + 403)
           05-pwa.spec.ts      manifest/icons served, SW controls page, offline cold launch
+          06-server-down.spec.ts server unreachable → app shell + cached cards still work
+          07-i18n.spec.ts     language auto-detect + Settings override
 ```
 
 Notes for writing e2e specs here:
@@ -189,7 +201,10 @@ handler directly.
 
 **Touch the sync protocol:** `src/lib/sync.ts` is pure with an injectable
 queue/transport — extend `tests/unit/sync.test.ts` and
-`tests/integration/sync_offline.test.ts` (golden replay) together.
+`tests/integration/sync_offline.test.ts` (golden replay) together. Two rules are
+load-bearing (REQUIREMENTS §6): a full pull never replaces a card that still has a
+queued op, and a 4xx-dropped op is always counted in the store's `failed` so the
+UI reports it.
 
 ## 8. Docker targets
 
@@ -211,5 +226,11 @@ docker exec -it <name> node -e "const db=require('better-sqlite3')('/data/loyalf
 ## 9. Known gaps / next steps
 
 - Real-device testing on Android Chrome / iOS Safari (wake lock, fullscreen,
-  scanner fallback degradations) is still manual.
+  scanner fallback degradations) is still manual — and it is the **only** proof of
+  "scannable at the checkout" (manual matrix in REQUIREMENTS §5a).
 - Brand logos are monograms; real SVG logos are a v2 polish item.
+- No migration fixture DBs yet: they start being committed with the first release
+  that changes the schema.
+- A 401 from the API does not yet bounce the client to the login page — it shows
+  the offline banner instead.
+- Read-only container rootfs is documented as v2 hardening, not current behavior.

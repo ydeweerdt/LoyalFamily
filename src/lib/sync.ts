@@ -70,12 +70,14 @@ export function coalesce(ops: QueuedOp[]): CoalescedOp[] {
 export interface FlushResult {
 	flushed: number;
 	queued: number; // ops still queued (network died mid-flush)
+	dropped: number; // ops the server rejected permanently (4xx) — the user must be told
 }
 
 export async function flushQueue(q: QueueStore, t: Transport): Promise<FlushResult> {
 	const ops = coalesce(await q.get());
 	let flushed = 0;
 	let remaining = 0;
+	let dropped = 0;
 	for (let i = 0; i < ops.length; i++) {
 		const op = ops[i];
 		const res = await t.send(op);
@@ -87,6 +89,7 @@ export async function flushQueue(q: QueueStore, t: Transport): Promise<FlushResu
 		// ok (2xx) or dropped (4xx, e.g. validation) — either way, unqueue
 		await q.remove(op.sources);
 		if (res.ok) flushed++;
+		else dropped += op.sources.length;
 	}
-	return { flushed, queued: remaining };
+	return { flushed, queued: remaining, dropped };
 }

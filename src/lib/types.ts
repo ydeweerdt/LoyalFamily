@@ -5,6 +5,8 @@ export interface User {
 	password_hash: string;
 	role: 'admin' | 'user';
 	created_at: string;
+	/** Bumped whenever a session must die (password change, role change). */
+	token_version: number;
 }
 
 /** User view safe to send to clients (no password hash). */

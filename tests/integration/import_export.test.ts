@@ -16,7 +16,7 @@ beforeEach(() => {
 function req(userId: string | null, method: string, url: string, body?: string): Request {
 	return new Request(`http://localhost${url}`, {
 		method,
-		headers: { ...(userId ? { cookie: `session=${createSessionToken(userId)}` } : {}) },
+		headers: { ...(userId ? { cookie: `session=${createSessionToken(userId, 0)}` } : {}) },
 		body
 	});
 }

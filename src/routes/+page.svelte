@@ -5,7 +5,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import { getBrand, monogram } from '$lib/brands';
 	import { filterTiles, type Tile } from '$lib/domain/cards';
-	import { cards, loadCards, offline, pending, patchCard, removeCard, tiles } from '$lib/stores/cards';
+	import { cards, loadCards, offline, pending, failed, patchCard, removeCard, tiles } from '$lib/stores/cards';
 	import { refreshSession, session } from '$lib/stores/session';
 	import { t } from '$lib/i18n.svelte';
 	import type { Card } from '$lib/types';
@@ -95,9 +95,10 @@
 
 	{#if errorMsg}<p class="error">{errorMsg}</p>{/if}
 
-	{#if $offline}
+	{#if $offline || $failed > 0}
 		<p class="offline">
-			⚠ {t('offline')}{$pending > 0 ? ` ${$pending} ${t('changes_waiting')}.` : ''}
+			{#if $offline}⚠ {t('offline')}{$pending > 0 ? ` ${$pending} ${t('changes_waiting')}.` : ''}{/if}
+			{#if $failed > 0}<span class="failed">⚠ {$failed} {t('changes_failed')}.</span>{/if}
 		</p>
 	{/if}
 
@@ -320,6 +321,10 @@
 		border-radius: 8px;
 		padding: 0.5rem 0.75rem;
 		font-size: 0.85rem;
+	}
+	.offline .failed {
+		color: #c92a2a;
+		font-weight: 600;
 	}
 	.error {
 		color: #c92a2a;

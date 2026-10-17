@@ -6,3 +6,4 @@ data
 .github
 *.db
 *.db-*
+!tests/fixtures/*.db
