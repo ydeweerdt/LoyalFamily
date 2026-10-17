@@ -156,7 +156,7 @@
 	.status {
 		color: #fff;
 		text-align: center;
-		font-size: 0.9rem;
+		font-size: 0.95rem;
 		padding: 0.5rem;
 	}
 	.controls {

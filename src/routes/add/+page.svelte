@@ -4,7 +4,7 @@
 	import CardForm, { type CardFormValues } from '$lib/components/CardForm.svelte';
 	import Scanner from '$lib/components/Scanner.svelte';
 	import Icon from '$lib/components/Icon.svelte';
-	import { monogram, searchBrands, type Brand } from '$lib/brands';
+	import { monogram, searchBrands, inkOn, type Brand } from '$lib/brands';
 	import { addCard } from '$lib/stores/cards';
 	import { uuid } from '$lib/domain/uuid';
 	import { refreshSession, session } from '$lib/stores/session';
@@ -71,7 +71,7 @@
 	{/if}
 	<div class="grid">
 		{#each brands as brand (brand.id)}
-			<button class="tile" style="background:{brand.color}" onclick={() => pick(brand)}>
+			<button class="tile" style="background:{brand.color};color:{inkOn(brand.color)}" onclick={() => pick(brand)}>
 				<span class="mono">{monogram(brand.name)}</span>
 				<span class="label">{brand.name}</span>
 			</button>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { monogram, searchBrands, BRANDS } from '$lib/brands';
+import { monogram, searchBrands, inkOn, BRANDS } from '$lib/brands';
 import { buildTiles, filterTiles, tileKey } from '$lib/domain/cards';
 import type { Card, PublicUser } from '$lib/types';
 
@@ -112,5 +112,35 @@ describe('filterTiles (home search)', () => {
 	});
 	it('no match returns empty (page shows empty state)', () => {
 		expect(filterTiles(tiles, 'zzz')).toHaveLength(0);
+	});
+});
+
+describe('inkOn()', () => {
+	it('white text on dark brand colors', () => {
+		expect(inkOn('#e30613')).toBe('#ffffff'); // Delhaize red
+		expect(inkOn('#1c3f94')).toBe('#ffffff'); // Lidl navy
+	});
+	it('dark text on the light colors that were unreadable in white', () => {
+		for (const c of ['#adb5bd', '#ff7900', '#00a9e0', '#00a4e4', '#00a3e0', '#0090d9']) {
+			expect(inkOn(c), c).toBe('#111111');
+		}
+	});
+	it('every catalog color keeps >= 3:1 contrast with the ink it picks', () => {
+		const lum = (hex: string) => {
+			const ch = (i: number) => {
+				const v = parseInt(hex.slice(i, i + 2), 16) / 255;
+				return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+			};
+			return 0.2126 * ch(1) + 0.7152 * ch(3) + 0.0722 * ch(5);
+		};
+		for (const b of BRANDS) {
+			const a = lum(inkOn(b.color));
+			const c = lum(b.color);
+			const ratio = (Math.max(a, c) + 0.05) / (Math.min(a, c) + 0.05);
+			expect(ratio, `${b.id} ${b.color} → ${inkOn(b.color)}`).toBeGreaterThanOrEqual(3);
+		}
+	});
+	it('unparseable color falls back to white', () => {
+		expect(inkOn('red')).toBe('#ffffff');
 	});
 });

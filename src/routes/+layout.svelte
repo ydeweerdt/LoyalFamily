@@ -91,6 +91,7 @@
 		--z-scanner: 50;
 		--safe-t: env(safe-area-inset-top, 0px);
 		--safe-b: env(safe-area-inset-bottom, 0px);
+		--safe-r: env(safe-area-inset-right, 0px);
 	}
 	@media (prefers-color-scheme: dark) {
 		:global(:root) {
@@ -166,7 +167,7 @@
 		border-radius: var(--radius-sm);
 	}
 	:global(.chip) {
-		font-size: 0.8rem;
+		font-size: 0.85rem;
 		text-transform: uppercase;
 		padding: 0.2rem 0.5rem;
 		border-radius: 999px;
@@ -183,7 +184,7 @@
 	}
 	:global(.grid) {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
+		grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
 		gap: 0.6rem;
 	}
 	:global(.tile) {
@@ -198,6 +199,10 @@
 		justify-content: center;
 		gap: 0.3rem;
 		cursor: pointer;
+		transition: transform 0.12s ease;
+	}
+	:global(.tile:active) {
+		transform: scale(0.96);
 	}
 	:global(.tile.skeleton) {
 		background: var(--surface-2);
@@ -208,7 +213,7 @@
 		opacity: 0.95;
 	}
 	:global(.label) {
-		font-size: 0.8rem;
+		font-size: 0.9rem;
 		opacity: 0.92;
 		max-width: 90%;
 		overflow: hidden;
@@ -217,7 +222,7 @@
 	}
 	:global(.badge) {
 		position: absolute;
-		font-size: 0.75rem;
+		font-size: 0.8rem;
 		padding: 0.1rem 0.35rem;
 		border-radius: 6px;
 		background: rgba(0, 0, 0, 0.45);
@@ -232,25 +237,58 @@
 		top: 6px;
 		left: 6px;
 	}
-	:global(.modal) {
+	:global(.scrim) {
 		position: fixed;
 		inset: 0;
+		border: none;
+		padding: 0;
 		background: rgba(0, 0, 0, 0.45);
+		z-index: var(--z-modal);
+	}
+	/* bottom sheet (Catima-style) instead of a centered dialog */
+	:global(.sheet) {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: calc(var(--z-modal) + 1);
+		background: var(--surface);
+		color: var(--text);
+		border-radius: var(--radius) var(--radius) 0 0;
+		padding: 1rem 1rem calc(1rem + var(--safe-b));
+		max-height: 85vh;
+		overflow: auto;
+		animation: sheet-up 0.18s ease-out;
+	}
+	@keyframes sheet-up {
+		from {
+			transform: translateY(24px);
+		}
+		to {
+			transform: none;
+		}
+	}
+	:global(.fab) {
+		position: fixed;
+		right: calc(1rem + var(--safe-r));
+		bottom: calc(1rem + var(--safe-b));
+		width: 56px;
+		height: 56px;
+		border-radius: 18px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: 1rem;
-		z-index: var(--z-modal);
+		background: var(--brand);
+		color: var(--brand-ink);
+		z-index: var(--z-menu);
 	}
-	:global(.modal-body) {
-		background: var(--surface);
-		color: var(--text);
-		border-radius: var(--radius);
-		padding: 1rem;
-		width: 100%;
-		max-width: 420px;
-		max-height: 85vh;
-		overflow: auto;
+	@media (prefers-reduced-motion: reduce) {
+		:global(.sheet) {
+			animation: none;
+		}
+		:global(.tile) {
+			transition: none;
+		}
 	}
 	:global(.error) {
 		color: var(--danger);
@@ -260,11 +298,11 @@
 	}
 	:global(.warn) {
 		color: var(--warn);
-		font-size: 0.9rem;
+		font-size: 0.95rem;
 	}
 	:global(.meta) {
 		color: var(--text-muted);
-		font-size: 0.85rem;
+		font-size: 0.9rem;
 	}
 
 	nav {
@@ -348,7 +386,7 @@
 		border-bottom: 1px solid var(--line);
 	}
 	main {
-		max-width: 480px;
+		max-width: 720px;
 		margin: 0 auto;
 		padding: 1rem 1rem calc(1rem + var(--safe-b));
 	}

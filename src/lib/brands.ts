@@ -64,3 +64,19 @@ export function monogram(name: string): string {
 	if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
 	return name.slice(0, 2).toUpperCase();
 }
+
+/**
+ * Tile text color for a background: white or near-black, whichever of the two has the
+ * higher contrast (WCAG relative luminance crossover is at L≈0.19). Several catalog
+ * colors (light blue, orange, grey) are unreadable in white.
+ */
+export function inkOn(hex: string): string {
+	const h = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+	if (!h) return '#ffffff';
+	const lin = (i: number) => {
+		const v = parseInt(h[1].slice(i, i + 2), 16) / 255;
+		return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+	};
+	const l = 0.2126 * lin(0) + 0.7152 * lin(2) + 0.0722 * lin(4);
+	return l > 0.19 ? '#111111' : '#ffffff';
+}

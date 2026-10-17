@@ -130,7 +130,7 @@
 		width: auto;
 	}
 	.hint {
-		font-size: 0.9rem;
+		font-size: 0.95rem;
 		color: #555;
 		text-align: center;
 	}
@@ -143,7 +143,7 @@
 		color: white;
 		border-radius: var(--radius-sm);
 		padding: 0.6rem 0.9rem;
-		font-size: 0.9rem;
+		font-size: 0.95rem;
 		max-width: 90%;
 		z-index: calc(var(--z-fullscreen) + 1);
 	}
