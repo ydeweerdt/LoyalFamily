@@ -77,6 +77,21 @@ describe('card CRUD + permissions (REQUIREMENTS §7)', () => {
 			.status).toBe(400);
 		expect((await createCardHandler(asReq(alice, 'POST', '/api/cards', newCard({ brand_id: 'nosuchbrand' }))))
 			.status).toBe(400);
+		// 12 digits cannot render as EAN_13 — rejected at save, not when the card is opened
+		expect((await createCardHandler(asReq(alice, 'POST', '/api/cards', newCard({ barcode_value: '540123456789' }))))
+			.status).toBe(400);
+	});
+
+	it('edit: value/symbology pair must stay renderable', async () => {
+		const card = newCard({ barcode_value: '123456789012345678', symbology: 'CODE_128' });
+		await createCardHandler(asReq(alice, 'POST', '/api/cards', card));
+
+		expect((await updateCardHandler(asReq(alice, 'PUT', `/api/cards/${card.id}`, { symbology: 'EAN_13' }), card.id))
+			.status).toBe(400);
+		expect((await updateCardHandler(asReq(alice, 'PUT', `/api/cards/${card.id}`, { barcode_value: 'Héllo 123' }), card.id))
+			.status).toBe(400);
+		expect((await updateCardHandler(asReq(alice, 'PUT', `/api/cards/${card.id}`, { barcode_value: '5401234567890' }), card.id))
+			.status).toBe(200); // bad check digit: warned, never blocked (§5a)
 	});
 
 	it('duplicate id → 409', async () => {

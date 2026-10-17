@@ -36,6 +36,29 @@ export function validVisibility(v: unknown): v is 'private' | 'shared' {
 	return v === 'private' || v === 'shared';
 }
 
+/**
+ * Can this value be encoded at all in this symbology? Mirrors the renderer's rules
+ * (JsBarcode EAN13/UPC/CODE39/CODE128) so a card that would only show "Invalid value
+ * for X" later is rejected when it is saved. Checksums are NOT checked here — they are
+ * warned about, never blocked (REQUIREMENTS §5a).
+ */
+export function symbologyValueError(value: string, symbology: string): string | undefined {
+	switch (symbology) {
+		case 'EAN_13':
+			return /^\d{13}$/.test(value) ? undefined : 'EAN_13 needs exactly 13 digits (12-digit codes are UPC_A)';
+		case 'UPC_A':
+			return /^\d{12}$/.test(value) ? undefined : 'UPC_A needs exactly 12 digits';
+		case 'CODE_39':
+			return /^[0-9A-Z.$/+% -]+$/.test(value)
+				? undefined
+				: 'CODE_39 only supports 0-9, uppercase A-Z and - . $ / + % space';
+		case 'CODE_128':
+			return !/[^\x20-\x7e]/.test(value) ? undefined : 'CODE_128 only supports printable ASCII characters';
+		default:
+			return undefined; // QR: any printable text
+	}
+}
+
 /** EAN-13 modulo-10 check digit (used to hint/pre-validate scanned values). */
 export function validEan13Checksum(v: string): boolean {
 	if (!/^\d{13}$/.test(v)) return false;

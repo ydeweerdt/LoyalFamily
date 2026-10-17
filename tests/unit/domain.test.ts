@@ -1,6 +1,29 @@
 import { describe, it, expect } from 'vitest';
 import { uuid } from '$lib/domain/uuid';
-import { validUuid } from '$lib/domain/validation';
+import { symbologyValueError, validUuid } from '$lib/domain/validation';
+
+describe('symbologyValueError (save-time check: the value must be encodable)', () => {
+	it('accepts what the renderer can encode', () => {
+		const ok: [string, string][] = [
+			['4006381333931', 'EAN_13'],
+			['5401234567890', 'EAN_13'], // bad check digit: warned about, never blocked (§5a)
+			['590123412342', 'UPC_A'],
+			['DELHAIZE-4501234567890', 'CODE_128'],
+			['HELLO-123', 'CODE_39'],
+			['https://example.com/c/abc', 'QR']
+		];
+		for (const [v, s] of ok) expect(symbologyValueError(v, s), `${v} / ${s}`).toBeUndefined();
+	});
+
+	it('rejects what would only show "Invalid value for X" when the card is opened', () => {
+		expect(symbologyValueError('540123456789', 'EAN_13')).toContain('EAN_13');
+		expect(symbologyValueError('54012345678901', 'EAN_13')).toContain('EAN_13');
+		expect(symbologyValueError('540123456789a', 'EAN_13')).toContain('EAN_13');
+		expect(symbologyValueError('5401234567890', 'UPC_A')).toContain('UPC_A');
+		expect(symbologyValueError('hello-123', 'CODE_39')).toContain('CODE_39');
+		expect(symbologyValueError('Héllo 123', 'CODE_128')).toContain('CODE_128');
+	});
+});
 
 describe('uuid()', () => {
 	it('produces valid v4 UUIDs (100 in a row)', () => {

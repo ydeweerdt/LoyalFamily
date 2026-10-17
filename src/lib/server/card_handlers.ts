@@ -12,7 +12,8 @@ import {
 	validDisplayName,
 	validSymbology,
 	validUuid,
-	validVisibility
+	validVisibility,
+	symbologyValueError
 } from '$lib/domain/validation';
 import { getCard, insertCard, listOwnedCards, listVisibleCards, softDeleteCard, updateCard, SYMBOLOGIES } from './cards';
 import type { CardPatch } from './cards';
@@ -39,6 +40,8 @@ export async function createCardHandler(request: Request): Promise<Response> {
 	if (!validColor(color)) return error('color must be #rrggbb', 400);
 	if (!validBarcodeValue(barcode_value)) return error('barcode value is required (1-512 printable chars)', 400);
 	if (!validSymbology(symbology, SYMBOLOGIES)) return error(`symbology must be one of ${SYMBOLOGIES.join(', ')}`, 400);
+	const valueError = symbologyValueError(barcode_value, symbology);
+	if (valueError) return error(valueError, 400);
 	if (!validVisibility(visibility)) return error("visibility must be 'private' or 'shared'", 400);
 	if (comment !== undefined && comment !== null && !validComment(comment)) return error('comment max 200 chars', 400);
 	if (brand_id != null && typeof brand_id !== 'string') return error('brand_id must be a string or null', 400);
@@ -87,6 +90,9 @@ export async function updateCardHandler(request: Request, id: string): Promise<R
 		if (!validSymbology(body.symbology, SYMBOLOGIES)) return error(`symbology must be one of ${SYMBOLOGIES.join(', ')}`, 400);
 		patch.symbology = body.symbology;
 	}
+	// a patch may change value or symbology alone — check the pair the card would end up with
+	const valueError = symbologyValueError(patch.barcode_value ?? card.barcode_value, patch.symbology ?? card.symbology);
+	if (valueError) return error(valueError, 400);
 	if (body.visibility !== undefined) {
 		if (!validVisibility(body.visibility)) return error("visibility must be 'private' or 'shared'", 400);
 		patch.visibility = body.visibility; // toggling allowed: caller is the owner (canEdit passed)

@@ -2,7 +2,7 @@
 	import Scanner from '$lib/components/Scanner.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import { t } from '$lib/i18n.svelte';
-	import { validEan13Checksum } from '$lib/domain/validation';
+	import { symbologyValueError, validEan13Checksum } from '$lib/domain/validation';
 	import { SYMBOLOGIES } from '$lib/types';
 
 	export type CardFormValues = {
@@ -36,9 +36,15 @@
 	const ean13Bad = $derived(
 		values.symbology === 'EAN_13' && values.barcode_value.length === 13 && !validEan13Checksum(values.barcode_value)
 	);
+	// value cannot be encoded in the chosen symbology at all → blocked, not just warned
+	const valueError = $derived(values.barcode_value ? symbologyValueError(values.barcode_value, values.symbology) : undefined);
 
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
+		if (valueError) {
+			errorMsg = valueError;
+			return;
+		}
 		busy = true;
 		errorMsg = '';
 		try {
@@ -82,6 +88,8 @@
 	</label>
 	{#if ean13Bad}
 		<p class="warn">{t('ean13_warn')}</p>
+	{:else if valueError}
+		<p class="warn">{valueError}</p>
 	{/if}
 	<label class="field-label">
 		{t('symbology')}

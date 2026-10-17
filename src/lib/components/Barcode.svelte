@@ -1,6 +1,8 @@
 <script lang="ts">
 	import JsBarcode from 'jsbarcode';
 	import QRCode from 'qrcode';
+	import { symbologyValueError, validEan13Checksum } from '$lib/domain/validation';
+	import { t } from '$lib/i18n.svelte';
 
 	/**
 	 * Renders a barcode as SVG.
@@ -23,6 +25,11 @@
 	let error = $state('');
 
 	const isQr = $derived(symbology === 'QR');
+	// shape is fine but the check digit is not: allowed by design (REQUIREMENTS §5a),
+	// so say what it is instead of the generic "invalid value"
+	const badCheckDigit = $derived(
+		symbology === 'EAN_13' && symbologyValueError(value, symbology) === undefined && !validEan13Checksum(value)
+	);
 
 	// JsBarcode format names
 	const FORMAT: Record<string, string> = {
@@ -50,7 +57,7 @@
 				margin: 10,
 				fontSize: 16,
 				valid: (v: boolean) => {
-					if (!v) error = `Invalid value for ${symbology}`;
+					if (!v) error = badCheckDigit ? t('ean13_warn') : `Invalid value for ${symbology}`;
 				}
 			});
 		} catch {
