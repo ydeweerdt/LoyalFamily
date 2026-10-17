@@ -21,9 +21,7 @@ export const BRANDS: Brand[] = [
 	{ id: 'lidl', name: 'Lidl Plus', color: '#1c3f94', symbology_hint: 'EAN_13' },
 	{ id: 'aldi', name: 'Aldi', color: '#1c4c9c' },
 	{ id: 'spar', name: 'Spar', color: '#009638' },
-	{ id: 'cora', name: 'Cora', color: '#e2001a' },
 	{ id: 'kruidvat', name: 'Kruidvat', color: '#009639', symbology_hint: 'EAN_13' },
-	{ id: 'dietsaver', name: 'Dietsaver', color: '#d9534f' },
 	{ id: 'decathlon', name: 'Decathlon', color: '#0064b5' },
 	{ id: 'mediamarkt', name: 'MediaMarkt', color: '#d7141d' },
 	{ id: 'ikea', name: 'IKEA Family', color: '#0051ba' },
@@ -35,14 +33,9 @@ export const BRANDS: Brand[] = [
 	{ id: 'hema', name: 'Hema', color: '#009a44' },
 	{ id: 'primark', name: 'Primark', color: '#00a4e4' },
 	{ id: 'brico', name: 'Brico', color: '#ed1c24' },
-	{ id: 'sncb', name: 'SNCB / NMBS', color: '#004899', symbology_hint: 'CODE_128' },
-	{ id: 'delijn', name: 'De Lijn', color: '#d6001c' },
-	{ id: 'tec', name: 'TEC', color: '#0057b8' },
 	{ id: 'bpost', name: 'Bpost', color: '#e2001a' },
 	{ id: 'proximus', name: 'Proximus', color: '#00a9e0' },
-	{ id: 'telenet', name: 'Telenet', color: '#00a3e0' },
-	{ id: 'voo', name: 'VOO', color: '#e2001a' },
-	{ id: 'orange', name: 'Orange', color: '#ff7900' }
+	{ id: 'telenet', name: 'Telenet', color: '#00a3e0' }
 ];
 
 export function getBrand(id: string): Brand | undefined {
