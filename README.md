@@ -23,6 +23,22 @@ make e2e          # Playwright golden flows against the built app
 First visit to an empty server: register → you become the administrator → invite
 family members from the Admin screen.
 
+## Deploying on another machine
+
+CI pushes the runtime image to GitHub Packages on every push to `main`, so the
+server does not need to build anything:
+
+The package is created private on the first run: set it to Public once (github.com
+→ your profile → Packages → loyalfamily → Package settings → Change visibility),
+after that a public image can be pulled without logging in:
+
+```bash
+docker pull ghcr.io/ydeweerdt/loyalfamily:latest
+```
+
+Then run it with the same compose file, replacing the `build:` block with the
+image name (or point a second compose file at it).
+
 ## Goals
 
 * Fast
