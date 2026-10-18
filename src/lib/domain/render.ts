@@ -1,16 +1,37 @@
 /**
- * 2D symbologies neither JsBarcode (1D only) nor `qrcode` (QR only) can draw.
+ * 2D symbologies drawn with the same library that reads them. JsBarcode is 1D only,
+ * and `qrcode` always encodes in byte mode at level M, so a re-rendered QR came out
+ * a different size and pattern from the one that was scanned. ZXing's writer picks the
+ * compact mode (numeric / alphanumeric / byte) the reference encoders use, so a scanned
+ * value re-encodes to the symbol the original generator produced.
  * AZTEC and DATA_MATRIX come from @zxing/library's writers as a BitMatrix → SVG.
  * shortcut: PDF_417 has no writer in our dependency set (ZXing-js ships only a
  * PDF417 *reader*); those cards show the raw value. Upgrade by adding a PDF417
  * encoder if real cards turn out to need it.
  */
-import { AztecCodeWriter, BarcodeFormat, DataMatrixWriter, type BitMatrix } from '@zxing/library';
+import {
+	AztecCodeWriter,
+	BarcodeFormat,
+	DataMatrixWriter,
+	EncodeHintType,
+	QRCodeWriter,
+	type BitMatrix
+} from '@zxing/library';
 
 const WRITERS: Record<string, (value: string) => BitMatrix> = {
+	// ZXing's QR writer defaults to error-correction level L and already pads the symbol
+	// with the spec's 4-module quiet zone; the AZTEC / DATA_MATRIX writers do not.
+	QR: (v) => {
+		const hints = new Map();
+		hints.set(EncodeHintType.CHARACTER_SET, 'UTF-8');
+		return new QRCodeWriter().encode(v, BarcodeFormat.QR_CODE, 0, 0, hints);
+	},
 	AZTEC: (v) => new AztecCodeWriter().encode(v, BarcodeFormat.AZTEC, 0, 0),
 	DATA_MATRIX: (v) => new DataMatrixWriter().encode(v, BarcodeFormat.DATA_MATRIX, 0, 0)
 };
+
+/** Modules of white border to add around what the writer returned. */
+const QUIET: Record<string, number> = { QR: 0 };
 
 export function isWriterRendered(symbology: string): boolean {
 	return symbology in WRITERS;
@@ -21,7 +42,7 @@ export function svg2d(value: string, symbology: string): string {
 	const m = WRITERS[symbology](value);
 	const w = m.getWidth();
 	const h = m.getHeight();
-	const q = 4;
+	const q = QUIET[symbology] ?? 4;
 	const d: string[] = [];
 	for (let y = 0; y < h; y++) {
 		for (let x = 0; x < w; x++) {

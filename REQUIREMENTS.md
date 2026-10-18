@@ -352,7 +352,8 @@ attachment is a v2 candidate.
 1. **Stack**: single **SvelteKit** app (adapter-node) serving both the PWA frontend
    and the JSON API, **better-sqlite3** for storage, TypeScript end-to-end.
    Deployed as one Docker container (see §10); backup = copy the SQLite file.
-   Barcode rendering: JsBarcode (1D) + qrcode (QR); scanning: `BarcodeDetector`
+   Barcode rendering: JsBarcode (1D) + `@zxing/library` writers (QR, AZTEC, DATA_MATRIX);
+   scanning: `BarcodeDetector`
    with a WASM ZXing fallback for browsers lacking it.
 2. **Offline scanning**: allowed — cards scanned offline are stored locally and
    queued for sync when connectivity returns.

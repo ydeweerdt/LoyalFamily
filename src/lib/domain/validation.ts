@@ -38,7 +38,7 @@ export function validVisibility(v: unknown): v is 'private' | 'shared' {
 
 /**
  * Can this value be encoded at all in this symbology? Mirrors the renderer's rules
- * (JsBarcode 1D, ZXing writers for AZTEC/DATA_MATRIX, node-qrcode for QR) so a card
+ * (JsBarcode 1D, ZXing writers for QR/AZTEC/DATA_MATRIX) so a card
  * that would only show "Invalid value for X" later is rejected when it is saved.
  * Checksums are NOT checked here — they are warned about, never blocked (REQUIREMENTS §5a).
  */

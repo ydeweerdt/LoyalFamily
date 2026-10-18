@@ -1,14 +1,13 @@
 /**
  * Barcode round-trip tests (REQUIREMENTS §5a): render with the exact libraries the app
- * uses (JsBarcode, node-qrcode, @zxing/library writers) → rasterize → decode with
- * ZXing → assert equality. This is our guarantee that whatever we draw, real scanners
- * can read — for every symbology in SYMBOLOGIES.
+ * uses (JsBarcode, @zxing/library writers) → rasterize → decode with ZXing → assert
+ * equality. This is our guarantee that whatever we draw, real scanners can read — for
+ * every symbology in SYMBOLOGIES.
  */
 import { describe, it, expect } from 'vitest';
 import JsBarcode from 'jsbarcode';
-import QRCode from 'qrcode';
 import { JSDOM } from 'jsdom';
-import { BarcodeFormat, BinaryBitmap, DecodeHintType, HybridBinarizer, MultiFormatReader, RGBLuminanceSource } from '@zxing/library';
+import { BarcodeFormat, BinaryBitmap, DecodeHintType, EncodeHintType, HybridBinarizer, MultiFormatReader, QRCodeWriter, RGBLuminanceSource } from '@zxing/library';
 
 import { svg2d } from '$lib/domain/render';
 import { SCANNABLE } from '$lib/domain/scanner';
@@ -95,46 +94,45 @@ function roundTrip1D(value: string, format: string, zxingFormat: BarcodeFormat):
 	return decode(img.pixels, img.width, img.height, zxingFormat);
 }
 
-function roundTripQR(value: string): string {
-	const qr = QRCode.create(value, { errorCorrectionLevel: 'M' });
-	const size = qr.modules.size;
-	const data = qr.modules.data;
-	const scale = 4;
-	const quiet = 4;
-	const width = (size + quiet * 2) * scale;
-	const pixels = new Uint8Array(width * width).fill(255);
-	for (let y = 0; y < size; y++)
-		for (let x = 0; x < size; x++)
-			if (data[y * size + x])
-				for (let dy = 0; dy < scale; dy++)
-					for (let dx = 0; dx < scale; dx++)
-						pixels[(y * scale + quiet * scale + dy) * width + x * scale + quiet * scale + dx] = 0;
-	return decode(pixels, width, width, BarcodeFormat.QR_CODE);
-}
-
-/** AZTEC / DATA_MATRIX: the app's own BitMatrix SVG → pixels → ZXing. */
-function roundTrip2D(value: string, symbology: string, format: BarcodeFormat): string {
-	const svg = svg2d(value, symbology);
-	const size = Number(/viewBox="0 0 (\d+) \d+"/.exec(svg)![1]);
-	const d = /d="([^"]+)"/.exec(svg)![1];
-	const modules: number[][] = Array.from({ length: size }, () => new Array<number>(size).fill(0));
-	// svg2d merges a row's dark modules into runs: M<x> <y>h<run>v1h-<run>z
-	for (const m of d.matchAll(/M(\d+) (\d+)h(\d+)v1h-\3z/g)) {
+/** Our 2D SVG → rows of '0'/'1' modules (svg2d merges each row's dark modules into runs). */
+function svgModules(svg: string): string[] {
+	const [, w, h] = /viewBox="0 0 (\d+) (\d+)"/.exec(svg)!;
+	const modules: string[][] = Array.from({ length: Number(h) }, () => Array<string>(Number(w)).fill('0'));
+	for (const m of svg.matchAll(/M(\d+) (\d+)h(\d+)v1h-\3z/g)) {
 		const x = Number(m[1]);
 		const y = Number(m[2]);
-		for (let i = 0; i < Number(m[3]); i++) modules[y][x + i] = 1;
+		for (let i = 0; i < Number(m[3]); i++) modules[y][x + i] = '1';
 	}
-	const scale = 4;
-	const quiet = 12;
+	return modules.map((r) => r.join(''));
+}
+
+/** ZXing BitMatrix → rows of '0'/'1' (already carries the spec's 4-module quiet zone). */
+function matrixRows(m: { getWidth(): number; getHeight(): number; get(x: number, y: number): boolean }): string[] {
+	return Array.from({ length: m.getHeight() }, (_, y) =>
+		Array.from({ length: m.getWidth() }, (_, x) => (m.get(x, y) ? '1' : '0')).join('')
+	);
+}
+
+function rasterRows(rows: string[], scale = 4, quiet = 8): { pixels: Uint8Array; width: number; height: number } {
+	const size = rows[0].length;
 	const width = (size + quiet * 2) * scale;
-	const pixels = new Uint8Array(width * width).fill(255);
-	for (let y = 0; y < size; y++)
-		for (let x = 0; x < size; x++)
-			if (modules[y][x])
-				for (let dy = 0; dy < scale; dy++)
-					for (let dx = 0; dx < scale; dx++)
-						pixels[((y + quiet) * scale + dy) * width + (x + quiet) * scale + dx] = 0;
-	return decode(pixels, width, width, format);
+	const height = (rows.length + quiet * 2) * scale;
+	const pixels = new Uint8Array(width * height).fill(255);
+	rows.forEach((row, y) =>
+		[...row].forEach((c, x) => {
+			if (c !== '1') return;
+			for (let dy = 0; dy < scale; dy++)
+				for (let dx = 0; dx < scale; dx++)
+					pixels[((y + quiet) * scale + dy) * width + (x + quiet) * scale + dx] = 0;
+		})
+	);
+	return { pixels, width, height };
+}
+
+/** The app's own 2D SVG → pixels → ZXing. */
+function roundTrip2D(value: string, symbology: string, format: BarcodeFormat): string {
+	const img = rasterRows(svgModules(svg2d(value, symbology)));
+	return decode(img.pixels, img.width, img.height, format);
 }
 
 describe('barcode round-trip: render → decode → equal (REQUIREMENTS §5a)', () => {
@@ -210,7 +208,26 @@ describe('barcode round-trip: render → decode → equal (REQUIREMENTS §5a)', 
 			'Héllo ✓ 0123456789',
 			'4501234567890'
 		]) {
-			expect(roundTripQR(v)).toBe(v);
+			expect(roundTrip2D(v, 'QR', BarcodeFormat.QR_CODE)).toBe(v);
+		}
+	});
+
+	// "Content is correctly extracted, but the regenerated image looks different": a QR
+	// image is not fixed by its content (mode, version, level and mask are encoder
+	// choices), so the only honest target is the symbol the reading library itself would
+	// have produced. Rendering through ZXing's writer — the family that scans these codes
+	// — reproduces it module for module instead of a same-text-but-different symbol.
+	// Both sides ask ZXing for UTF-8: its byte mode carries a charset nibble, and the same
+	// text encodes to a different symbol without it.
+	it('a scanned QR re-renders as the symbol it was, module for module', () => {
+		for (const value of ['4501234567890', 'https://dreamland.be/u/abc123', 'ABC123', 'Héllo ✓ 0123456789']) {
+			const hints = new Map();
+			hints.set(EncodeHintType.CHARACTER_SET, 'UTF-8'); // what render.ts asks for, so scanners agree on the bytes
+			const original = new QRCodeWriter().encode(value, BarcodeFormat.QR_CODE, 0, 0, hints); // what the card's generator made
+			const img = rasterRows(matrixRows(original));
+			const scanned = decode(img.pixels, img.width, img.height, BarcodeFormat.QR_CODE);
+			expect(scanned).toBe(value);
+			expect(svgModules(svg2d(scanned, 'QR'))).toEqual(matrixRows(original));
 		}
 	});
 

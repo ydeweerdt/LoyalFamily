@@ -1,14 +1,14 @@
 <script lang="ts">
 	import JsBarcode from 'jsbarcode';
-	import QRCode from 'qrcode';
 	import { isWriterRendered, svg2d } from '$lib/domain/render';
 	import { symbologyValueError, validEan13Checksum } from '$lib/domain/validation';
 	import { t } from '$lib/i18n.svelte';
 
 	/**
 	 * Renders a barcode as SVG.
-	 * 1D symbologies → JsBarcode; QR → node-qrcode (browser-safe svg output);
-	 * AZTEC / DATA_MATRIX → @zxing/library writers (see $lib/domain/render).
+	 * 1D symbologies → JsBarcode; QR / AZTEC / DATA_MATRIX → @zxing/library writers
+	 * (see $lib/domain/render) — the same library that scans them, so a scanned value
+	 * re-renders as the symbol it came from.
 	 * If the value is invalid for the symbology, falls back to showing the raw value
 	 * (a readable number is still better than a broken barcode at the checkout).
 	 */
@@ -26,7 +26,6 @@
 	let html = $state('');
 	let error = $state('');
 
-	const isQr = $derived(symbology === 'QR');
 	// shape is fine but the check digit is not: allowed by design (REQUIREMENTS §5a),
 	// so say what it is instead of the generic "invalid value"
 	const badCheckDigit = $derived(
@@ -49,12 +48,6 @@
 	$effect(() => {
 		error = '';
 		html = '';
-		if (isQr) {
-			QRCode.toString(value, { type: 'svg', margin: 2, errorCorrectionLevel: 'M' })
-				.then((s) => (html = s))
-				.catch(() => (error = 'Could not render QR code'));
-			return;
-		}
 		if (isWriterRendered(symbology)) {
 			try {
 				html = svg2d(value, symbology);
