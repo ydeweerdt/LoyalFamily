@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatName, mapFormat, orderedFormats, SCANNABLE } from '$lib/domain/scanner';
+import { formatName, mapFormat, nativeFormats, orderedFormats, SCANNABLE } from '$lib/domain/scanner';
 import { SYMBOLOGIES } from '$lib/types';
 
 describe('scanner helpers', () => {
@@ -48,6 +48,11 @@ describe('scanner helpers', () => {
 		for (const f of ['MAXICODE', 'RSS_14', ' nonsense']) {
 			expect(mapFormat(f)).toBeUndefined();
 		}
+	});
+
+	it('native detector list keeps the browser spelling and drops what we cannot validate', () => {
+		const chrome = ['aztec', 'codabar', 'code_128', 'code_39', 'code_93', 'data_matrix', 'ean_13', 'ean_8', 'itf', 'pdf417', 'qr_code', 'upc_a', 'upc_e', 'unknown'];
+		expect(nativeFormats(chrome)).toEqual(chrome.slice(0, -1));
 	});
 
 	it('no hint → stable default order', () => {

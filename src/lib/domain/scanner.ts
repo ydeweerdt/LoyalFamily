@@ -57,6 +57,16 @@ export function mapFormat(raw: string): Card['symbology'] | undefined {
 }
 
 /**
+ * Formats to hand the native BarcodeDetector: the browser's own names, passed
+ * back verbatim. Our spelling is not the browser's ('pdf_417' vs Chrome's
+ * 'pdf417'), and an unknown enum value makes the constructor throw, which drops
+ * the whole scan onto the slow ZXing path.
+ */
+export function nativeFormats(supported: readonly string[]): string[] {
+	return supported.filter((f) => mapFormat(f) !== undefined);
+}
+
+/**
  * Formats to feed the detector, brand hint first (REQUIREMENTS §4: hints
  * prioritize the decoder), rest in stable order.
  */

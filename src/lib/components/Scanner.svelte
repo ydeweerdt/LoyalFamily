@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import { BrowserMultiFormatReader, DecodeHintType, type Result } from '@zxing/library';
-	import { formatName, mapFormat, orderedFormats } from '$lib/domain/scanner';
+	import { formatName, mapFormat, nativeFormats, orderedFormats } from '$lib/domain/scanner';
 	import Icon from '$lib/components/Icon.svelte';
 	import { t } from '$lib/i18n.svelte';
 
@@ -74,12 +74,16 @@
 
 		const formats = orderedFormats(symbologyHint);
 
-		// A browser that does not implement every format name may reject the whole list;
-		// the ZXing fallback below then takes over.
+		// Ask the browser which formats it implements and hand them back verbatim:
+		// an unknown name (our 'pdf_417' is not Chrome's 'pdf417') makes the
+		// constructor throw and silently drops the scan onto the ZXing fallback.
 		let detector: { detect: (s: HTMLVideoElement) => Promise<{ rawValue: string; format: string }[]> } | undefined;
 		try {
 			// @ts-expect-error BarcodeDetector is not in the standard TS DOM lib yet
-			detector = typeof BarcodeDetector === 'function' ? new BarcodeDetector({ formats: formats.map((f) => formatName(f).toLowerCase()) }) : undefined;
+			const supported = typeof BarcodeDetector === 'function' ? await BarcodeDetector.getSupportedFormats() : [];
+			const native = nativeFormats(supported);
+			// @ts-expect-error BarcodeDetector is not in the standard TS DOM lib yet
+			detector = native.length ? new BarcodeDetector({ formats: native }) : undefined;
 		} catch {
 			detector = undefined;
 		}
@@ -106,9 +110,13 @@
 			status = t('scanning_compat');
 			const hints = new Map();
 			hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
-			hints.set(DecodeHintType.TRY_HARDER, true);
+			// shortcut: TRY_HARDER makes zxing-js 0.21.3 miss horizontal 1D codes from a
+			// video frame entirely (559 attempts / 0 hits vs 11 ms without it). Re-test if the lib is upgraded.
 			reader = new BrowserMultiFormatReader(hints, 400);
-			reader.decodeFromVideoElementContinuously(videoEl, (result?: Result) => {
+			// decodeFromVideoElementContinuously waits for the video's `playing` event before it
+			// starts looping — we already played it above, so that event has fired and the scan
+			// would never begin. Drive the loop directly.
+			reader.decodeContinuously(videoEl, (result?: Result) => {
 				if (done || !result) return;
 				const sym = mapFormat(formatName(result.getBarcodeFormat()));
 				const text = result.getText();

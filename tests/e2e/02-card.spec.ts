@@ -121,6 +121,9 @@ test('scanning in the add flow prefills the card form', async ({ page }) => {
 	// fake camera is real (launch flags below); only the detector is stubbed
 	await page.addInitScript(() => {
 		(window as any).BarcodeDetector = class {
+			static async getSupportedFormats() {
+				return ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'itf', 'codabar', 'qr_code', 'aztec', 'data_matrix', 'pdf417', 'unknown'];
+			}
 			async detect() {
 				return [{ format: 'ean_13', rawValue: '5401234567894' }];
 			}
