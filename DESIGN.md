@@ -29,6 +29,12 @@ Requirements: see [REQUIREMENTS.md](REQUIREMENTS.md). Stack: SvelteKit (adapter-
 Offline: everything above works except brand-picker is local data (bundled),
 scanner works offline (card queued), barcode view always works from cache.
 
+Back button: the barcode view, brand tile view and card edit are overlays, not routes,
+so each open one owns a history entry (`pushState` in `src/routes/+page.svelte`) — the
+phone back button peels one overlay at a time before it leaves the page. `/add` replaces
+itself with the home grid on save/cancel, so a finished add form is never sitting behind
+the grid waiting for the next back press.
+
 ## 2. Data model (SQLite)
 
 ```sql
@@ -350,6 +356,8 @@ rollback decisions easy.
 14. ✅ One encoder for read and write: QR is now drawn by ZXing's writer instead of
     `qrcode`, so re-rendering a scanned code reproduces the symbol rather than a
     same-text-but-different one (`qrcode` dropped from the dependencies)
+15. ✅ Phone back button matches the flow: open overlays own a history entry and are
+    peeled one layer at a time; `/add` replaces itself in history after save/cancel
 
 ## 11. UI design system
 

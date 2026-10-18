@@ -57,6 +57,42 @@ test('stacked brand: tap opens tile view, tap tile shows barcode, hold opens edi
 	await expect(page.getByRole('dialog', { name: 'Edit card' })).toBeVisible({ timeout: 2000 });
 });
 
+// The phone back button is a history navigation, and overlays are not routes: without
+// a history entry per overlay, back skipped past the barcode straight to /add.
+test('phone back button closes overlays one layer at a time', async ({ page }) => {
+	await login(page, 'papa', 'pass12345');
+	await addCard(page, 'colruyt', 'Colruyt', {
+		barcode_value: '3200000000001',
+		symbology: 'EAN_13',
+		comment: 'back button card'
+	});
+
+	// single-card tile → barcode full-screen → back closes it and stays on the grid
+	await page.locator('.tile', { hasText: 'Colruyt' }).click();
+	await expect(page.locator('.fullscreen')).toBeVisible();
+	await page.goBack();
+	await expect(page.locator('.fullscreen')).toBeHidden();
+	await expect(page).toHaveURL(/\/$/);
+	await expect(page.locator('.tile', { hasText: 'Colruyt' })).toBeVisible();
+
+	// stacked brand: barcode over the tile sheet → back peels one layer at a time
+	const stacked = page.locator('.tile', { hasText: 'Delhaize' });
+	await stacked.click();
+	const sheet = page.getByRole('dialog', { name: 'Delhaize' });
+	await expect(sheet).toBeVisible();
+	await sheet.locator('.tile', { hasText: 'papa private' }).click();
+	await expect(page.locator('.fullscreen')).toBeVisible();
+	await page.goBack();
+	await expect(page.locator('.fullscreen')).toBeHidden();
+	await expect(sheet).toBeVisible();
+	await page.goBack();
+	await expect(sheet).toBeHidden();
+
+	// the add form that was already finished is not waiting behind the grid
+	await page.goBack();
+	await expect(page).not.toHaveURL(/\/add/);
+});
+
 test('invalid EAN-13 check digit is flagged before saving', async ({ page }) => {
 	await login(page, 'papa', 'pass12345');
 	await page.getByTitle('Add card').click();

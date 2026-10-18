@@ -57,7 +57,9 @@
 			...values
 		});
 		if (!res.ok) throw new Error(res.error);
-		await goto('/');
+		// replace, not push: a finished add form should not be sitting behind the main
+		// view for the next back press
+		await goto('/', { replaceState: true });
 	}
 </script>
 
@@ -90,7 +92,7 @@
 				scanning = false;
 			}}
 			onmanual={() => (scanning = false)}
-			onclose={() => goto('/')}
+			onclose={() => goto('/', { replaceState: true })}
 		/>
 	{:else}
 		<h1>{t('add_card')} — {picked === 'unknown' ? t('custom') : picked.name}</h1>
@@ -100,7 +102,7 @@
 			submitLabel={t('add_card')}
 			symbologyHint={picked === 'unknown' ? undefined : picked.symbology_hint}
 			onsave={create}
-			oncancel={() => goto('/')}
+			oncancel={() => goto('/', { replaceState: true })}
 		/>
 	{/if}
 {/if}

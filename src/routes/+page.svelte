@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { pushState } from '$app/navigation';
+	import { page } from '$app/state';
 	import CardForm, { type CardFormValues } from '$lib/components/CardForm.svelte';
 	import BarcodeView from '$lib/components/BarcodeView.svelte';
 	import Icon from '$lib/components/Icon.svelte';
@@ -99,6 +101,33 @@
 		if (open) queueMicrotask(() => sheet?.querySelector<HTMLElement>('button, a[href], input, select')?.focus());
 	});
 
+	/* Overlays are not routes, so the phone back button used to skip straight past them to
+	   whatever page was last open — usually /add. Each open overlay therefore owns one history
+	   entry (kit's pushState, so its own bookkeeping stays intact); a popstate we did not ask
+	   for closes the topmost overlay, and closing an overlay removes its entry. */
+	const openOverlays = $derived((openTile ? 1 : 0) + (editCard ? 1 : 0) + (barcodeCard ? 1 : 0));
+	let overlayEntries = 0;
+	let ourGo = false; // this popstate is the history.go() below, not the user
+
+	$effect(() => {
+		if (openOverlays === overlayEntries) return;
+		if (openOverlays > overlayEntries) {
+			pushState('', { ...page.state, lfOverlay: true });
+		} else {
+			ourGo = true;
+			history.go(openOverlays - overlayEntries);
+		}
+		overlayEntries = openOverlays;
+	});
+
+	function onPopstate() {
+		if (ourGo) return void (ourGo = false);
+		if (barcodeCard) barcodeCard = null;
+		else if (editCard) editCard = null;
+		else if (openTile) openTile = null;
+		else overlayEntries = 0; // nothing of ours left: a real navigation
+	}
+
 	function onKeydown(e: KeyboardEvent) {
 		if (barcodeCard) return; // BarcodeView closes itself
 		if (!editCard && !openTile) return;
@@ -122,7 +151,7 @@
 	}
 </script>
 
-<svelte:window onkeydown={onKeydown} />
+<svelte:window onkeydown={onKeydown} onpopstate={onPopstate} />
 
 {#if $session.user}
 	<h1>{t('cards')}</h1>
