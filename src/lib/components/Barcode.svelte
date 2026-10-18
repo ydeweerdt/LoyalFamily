@@ -1,12 +1,14 @@
 <script lang="ts">
 	import JsBarcode from 'jsbarcode';
 	import QRCode from 'qrcode';
+	import { isWriterRendered, svg2d } from '$lib/domain/render';
 	import { symbologyValueError, validEan13Checksum } from '$lib/domain/validation';
 	import { t } from '$lib/i18n.svelte';
 
 	/**
 	 * Renders a barcode as SVG.
-	 * 1D symbologies → JsBarcode; QR → node-qrcode (browser-safe svg output).
+	 * 1D symbologies → JsBarcode; QR → node-qrcode (browser-safe svg output);
+	 * AZTEC / DATA_MATRIX → @zxing/library writers (see $lib/domain/render).
 	 * If the value is invalid for the symbology, falls back to showing the raw value
 	 * (a readable number is still better than a broken barcode at the checkout).
 	 */
@@ -21,7 +23,7 @@
 	} = $props();
 
 	let svgEl = $state<SVGSVGElement | undefined>();
-	let qrSvg = $state('');
+	let html = $state('');
 	let error = $state('');
 
 	const isQr = $derived(symbology === 'QR');
@@ -34,18 +36,35 @@
 	// JsBarcode format names
 	const FORMAT: Record<string, string> = {
 		EAN_13: 'ean13',
+		EAN_8: 'ean8',
 		UPC_A: 'upc',
+		UPC_E: 'upce',
 		CODE_128: 'code128',
-		CODE_39: 'code39'
+		CODE_39: 'code39',
+		CODE_93: 'code93',
+		ITF: 'itf',
+		CODABAR: 'codabar'
 	};
 
 	$effect(() => {
 		error = '';
-		qrSvg = '';
+		html = '';
 		if (isQr) {
 			QRCode.toString(value, { type: 'svg', margin: 2, errorCorrectionLevel: 'M' })
-				.then((s) => (qrSvg = s))
+				.then((s) => (html = s))
 				.catch(() => (error = 'Could not render QR code'));
+			return;
+		}
+		if (isWriterRendered(symbology)) {
+			try {
+				html = svg2d(value, symbology);
+			} catch {
+				error = `Cannot render ${symbology} from this value`;
+			}
+			return;
+		}
+		if (!FORMAT[symbology]) {
+			error = `${symbology} cannot be drawn here — read the value instead`;
 			return;
 		}
 		if (!svgEl) return;
@@ -69,8 +88,8 @@
 {#if error}
 	<p class="error">{error}</p>
 	<code class="fallback">{value}</code>
-{:else if isQr}
-	{@html qrSvg}
+{:else if html}
+	{@html html}
 {:else}
 	<svg bind:this={svgEl} role="img" aria-label="{symbology} barcode"></svg>
 {/if}

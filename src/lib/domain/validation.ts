@@ -38,24 +38,40 @@ export function validVisibility(v: unknown): v is 'private' | 'shared' {
 
 /**
  * Can this value be encoded at all in this symbology? Mirrors the renderer's rules
- * (JsBarcode EAN13/UPC/CODE39/CODE128) so a card that would only show "Invalid value
- * for X" later is rejected when it is saved. Checksums are NOT checked here — they are
- * warned about, never blocked (REQUIREMENTS §5a).
+ * (JsBarcode 1D, ZXing writers for AZTEC/DATA_MATRIX, node-qrcode for QR) so a card
+ * that would only show "Invalid value for X" later is rejected when it is saved.
+ * Checksums are NOT checked here — they are warned about, never blocked (REQUIREMENTS §5a).
  */
 export function symbologyValueError(value: string, symbology: string): string | undefined {
 	switch (symbology) {
 		case 'EAN_13':
 			return /^\d{13}$/.test(value) ? undefined : 'EAN_13 needs exactly 13 digits (12-digit codes are UPC_A)';
+		case 'EAN_8':
+			return /^\d{8}$/.test(value) ? undefined : 'EAN_8 needs exactly 8 digits';
 		case 'UPC_A':
 			return /^\d{12}$/.test(value) ? undefined : 'UPC_A needs exactly 12 digits';
+		case 'UPC_E':
+			return /^(\d{6}|[01]\d{7})$/.test(value)
+				? undefined
+				: 'UPC_E needs 6 digits, or 8 digits starting with 0 or 1';
+		case 'ITF':
+			return /^(\d{2})+$/.test(value) ? undefined : 'ITF (Interleaved 2 of 5) needs an even number of digits';
+		case 'CODABAR':
+			return /^([0-9$\-.:+/]+|[A-D][0-9$\-.:+/]+[A-D])$/.test(value)
+				? undefined
+				: 'CODABAR only supports 0-9 and - $ : . / + (start/stop A-D optional, both or neither)';
 		case 'CODE_39':
 			return /^[0-9A-Z.$/+% -]+$/.test(value)
 				? undefined
 				: 'CODE_39 only supports 0-9, uppercase A-Z and - . $ / + % space';
+		case 'CODE_93':
+			return /^[0-9A-Z.$/+% -]+$/.test(value)
+				? undefined
+				: 'CODE_93 only supports 0-9, uppercase A-Z and - . $ / + % space';
 		case 'CODE_128':
 			return !/[^\x20-\x7e]/.test(value) ? undefined : 'CODE_128 only supports printable ASCII characters';
 		default:
-			return undefined; // QR: any printable text
+			return undefined; // QR / AZTEC / DATA_MATRIX / PDF_417: any printable text
 	}
 }
 

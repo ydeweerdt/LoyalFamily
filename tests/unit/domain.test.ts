@@ -8,6 +8,15 @@ describe('symbologyValueError (save-time check: the value must be encodable)', (
 			['4006381333931', 'EAN_13'],
 			['5401234567890', 'EAN_13'], // bad check digit: warned about, never blocked (§5a)
 			['590123412342', 'UPC_A'],
+			['96385074', 'EAN_8'],
+			['012345', 'UPC_E'],
+			['04210007', 'UPC_E'],
+			['123456', 'ITF'],
+			['1234-5678', 'CODABAR'],
+			['ABC.$/+', 'CODE_93'],
+			['https://example.com/c/abc', 'AZTEC'],
+			['4501234567890', 'DATA_MATRIX'],
+			['https://example.com/pdf417', 'PDF_417'],
 			['DELHAIZE-4501234567890', 'CODE_128'],
 			['HELLO-123', 'CODE_39'],
 			['https://example.com/c/abc', 'QR']
@@ -20,6 +29,13 @@ describe('symbologyValueError (save-time check: the value must be encodable)', (
 		expect(symbologyValueError('54012345678901', 'EAN_13')).toContain('EAN_13');
 		expect(symbologyValueError('540123456789a', 'EAN_13')).toContain('EAN_13');
 		expect(symbologyValueError('5401234567890', 'UPC_A')).toContain('UPC_A');
+		expect(symbologyValueError('540123456789', 'EAN_8')).toContain('EAN_8');
+		expect(symbologyValueError('963850745', 'EAN_8')).toContain('EAN_8');
+		expect(symbologyValueError('12345', 'ITF')).toContain('ITF');
+		expect(symbologyValueError('12345678901234', 'UPC_E')).toContain('UPC_E');
+		expect(symbologyValueError('12345;678', 'CODABAR')).toContain('CODABAR');
+		expect(symbologyValueError('A12345B', 'CODABAR')).toBeUndefined();
+		expect(symbologyValueError('hello-123', 'CODE_93')).toContain('CODE_93');
 		expect(symbologyValueError('hello-123', 'CODE_39')).toContain('CODE_39');
 		expect(symbologyValueError('Héllo 123', 'CODE_128')).toContain('CODE_128');
 	});

@@ -73,7 +73,7 @@ Vision: see [README.md](README.md). This document refines it into concrete requi
 | `brandId` | reference into curated brand catalog, or null |
 | `color` | brand color (from catalog) or user-picked |
 | `barcodeValue` | the decoded string; editable by owner |
-| `symbology` | EAN_13, UPC_A, CODE_128, CODE_39, QR (+ AZTEC/DATA_MATRIX/PDF_417 later); editable by owner |
+| `symbology` | EAN_8, EAN_13, UPC_A, UPC_E, ITF, CODABAR, CODE_39, CODE_93, CODE_128, QR, AZTEC, DATA_MATRIX, PDF_417; editable by owner |
 | `visibility` | `private` (owner only) or `shared` (whole family); owner can toggle |
 | `comment` | optional free text; disambiguates multiple cards of the same brand |
 | `ownerId` | the user who added the card; ownership is fixed |
@@ -95,8 +95,11 @@ attachment is a v2 candidate.
 
 ## 5. Scanning & rendering
 
-- **Render** (checkout): EAN-13, UPC-A, CODE_128, CODE_39 via a JS barcode renderer;
-  QR via a QR renderer. Rendered offline from stored data, fast (< ~200 ms to display).
+- **Render** (checkout): EAN_8, EAN_13, UPC_A, UPC_E, ITF, CODABAR, CODE_39, CODE_93,
+  CODE_128 via a JS barcode renderer; QR via a QR renderer; AZTEC and DATA_MATRIX via
+  the ZXing writers. PDF_417 has no renderer in our dependency set (ZXing-js ships a
+  PDF417 *reader* only) → those cards use the raw-value fallback below. Rendered
+  offline from stored data, fast (< ~200 ms to display).
 - **Scan** (add card): camera-based. Use `BarcodeDetector` when available; fall back
   to a WASM decoder (ZXing-js or similar) for iOS Safari / Firefox.
   The **detection set equals the render set** in v1; scans of other symbologies are
@@ -114,8 +117,11 @@ attachment is a v2 candidate.
   only overrides it on manual entry.
 - **Shape is validated when the card is saved**, not when it is opened: a value the
   symbology cannot encode at all is refused by the form (reason shown inline) and by
-  the API — EAN-13 = 13 digits, UPC-A = 12 digits, CODE_39 = `0-9`, uppercase `A-Z`
-  and `- . $ / + %` space, CODE_128 = printable ASCII, QR = any printable text.
+  the API — EAN-13 = 13 digits, EAN-8 = 8 digits, UPC-A = 12 digits, UPC_E = 6 digits
+  (or 8 starting with 0/1), ITF = even number of digits, CODABAR = `0-9` and
+  `- $ : . / +` (start/stop `A-D` optional), CODE_39 and CODE_93 = `0-9`, uppercase
+  `A-Z` and `- . $ / + %` space, CODE_128 = printable ASCII, QR / AZTEC / DATA_MATRIX
+  / PDF_417 = any printable text.
   Editing only the value or only the symbology is checked against the pair the card
   would end up with.
 - Checksums are **warned about, never blocked** where the symbology has one
@@ -124,8 +130,9 @@ attachment is a v2 candidate.
 - Values are printable text, 1–512 chars. QR values are stored as-is (byte mode),
   no escaping or re-encoding.
 - A value that cannot be rendered in its symbology — imported or pre-existing data,
-  since new saves are rejected — falls back to the raw number + symbology name: a
-  readable number at the checkout beats a broken barcode.
+  since new saves are rejected, and PDF_417, which has no renderer — falls back to the
+  raw number + symbology name: a readable number at the checkout beats a broken
+  barcode.
 - **Acceptance gate:** "scannable at the checkout" is verified by the round-trip
   suite (§11) *and* by a manual matrix — supported symbology × phone (Android
   Chrome, iOS Safari) × a real store scanner — before every release. No unit test

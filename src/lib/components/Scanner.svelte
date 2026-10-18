@@ -74,11 +74,18 @@
 
 		const formats = orderedFormats(symbologyHint);
 
-		// @ts-expect-error BarcodeDetector is not in the standard TS DOM lib yet
-		if (typeof BarcodeDetector === 'function') {
+		// A browser that does not implement every format name may reject the whole list;
+		// the ZXing fallback below then takes over.
+		let detector: { detect: (s: HTMLVideoElement) => Promise<{ rawValue: string; format: string }[]> } | undefined;
+		try {
+			// @ts-expect-error BarcodeDetector is not in the standard TS DOM lib yet
+			detector = typeof BarcodeDetector === 'function' ? new BarcodeDetector({ formats: formats.map((f) => formatName(f).toLowerCase()) }) : undefined;
+		} catch {
+			detector = undefined;
+		}
+
+		if (detector) {
 			status = t('scanning');
-			// @ts-expect-error see above
-			const detector = new BarcodeDetector({ formats: formats.map((f) => formatName(f).toLowerCase()) });
 			timer = setInterval(async () => {
 				if (done || !videoEl) return;
 				try {

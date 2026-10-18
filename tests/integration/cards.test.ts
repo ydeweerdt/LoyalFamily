@@ -69,7 +69,7 @@ describe('card CRUD + permissions (REQUIREMENTS §7)', () => {
 	it('rejects invalid payloads', async () => {
 		expect((await createCardHandler(asReq(alice, 'POST', '/api/cards', newCard({ id: 'not-a-uuid' }))))
 			.status).toBe(400);
-		expect((await createCardHandler(asReq(alice, 'POST', '/api/cards', newCard({ symbology: 'AZTEC' }))))
+		expect((await createCardHandler(asReq(alice, 'POST', '/api/cards', newCard({ symbology: 'MAXICODE' }))))
 			.status).toBe(400);
 		expect((await createCardHandler(asReq(alice, 'POST', '/api/cards', newCard({ color: 'red' }))))
 			.status).toBe(400);

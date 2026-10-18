@@ -58,7 +58,7 @@ cards (
   name TEXT NOT NULL,                   -- brand name or free text
   color TEXT NOT NULL,                  -- #rrggbb tile background
   barcode_value TEXT NOT NULL,
-  symbology TEXT NOT NULL,              -- EAN_13 | UPC_A | CODE_128 | CODE_39 | QR
+  symbology TEXT NOT NULL,              -- EAN_8 | EAN_13 | UPC_A | UPC_E | ITF | CODABAR | CODE_39 | CODE_93 | CODE_128 | QR | AZTEC | DATA_MATRIX | PDF_417
   visibility TEXT NOT NULL DEFAULT 'private',  -- 'private' | 'shared'
   comment TEXT,
   created_at TEXT NOT NULL,
@@ -76,7 +76,8 @@ Visibility rule for every read: `owner_id = me OR visibility = 'shared'`.
 
 Migrations are plain SQL files in `src/lib/server/migrations/`, applied in version
 order at startup and recorded in `schema_versions`. Never edit an applied one —
-add the next file (002 added `token_version` this way).
+add the next file (002 added `token_version`, 003 widened the `cards.symbology` CHECK
+to the full symbology set this way).
 
 ## 3. API (JSON, session-cookie auth)
 
@@ -185,8 +186,11 @@ retryable → the op stays queued and FIFO order is never reordered.
   The SVG is scaled to the viewport by CSS, never re-rasterized. Changing any of
   these requires re-running the round-trip suite **and** the manual hardware matrix
   (REQUIREMENTS §5a).
-- Barcode rendering: JsBarcode (EAN-13/UPC-A/Code128/Code39, SVG) + `qrcode` for QR.
-  An unrenderable value falls back to the raw text + symbology name (REQUIREMENTS §5a).
+- Barcode rendering: JsBarcode (EAN_8/EAN_13/UPC_A/UPC_E/ITF/CODABAR/CODE_39/CODE_93/
+  CODE_128, SVG) + `qrcode` for QR + `@zxing/library` writers for AZTEC and DATA_MATRIX
+  (`src/lib/domain/render.ts`, BitMatrix → SVG). PDF_417 has no renderer in our
+  dependency set → raw value. An unrenderable value falls back to the raw text +
+  symbology name (REQUIREMENTS §5a).
 - Scanning: `BarcodeDetector` if available; else ZXing-WASM (e.g. `@zxing/library`).
   Offline scan → card saved locally with `pending` flag → synced later.
 - iOS: Safari can evict a PWA's IndexedDB after long disuse. The full pull makes
@@ -293,10 +297,11 @@ Tooling:
 - **Playwright** e2e: the golden flows from REQUIREMENTS §11 (7 specs, run serially
   on one fresh server), incl. offline scenarios (`context.setOffline(true)`, server
   down) and PWA install/offline cold start, against the built app.
-- **Barcode round-trip suite**: JsBarcode/qrcode render → `@zxing/library` (Node)
-  decode → assert equality, one test per symbology incl. edge cases (short codes,
+- **Barcode round-trip suite**: JsBarcode/qrcode/ZXing-writer render → `@zxing/library`
+  (Node) decode → assert equality, one test per symbology incl. edge cases (short codes,
   checksum digits, non-ASCII in QR). This is also what exercises the ZXing decoder
-  the browser fallback uses.
+  the browser fallback uses. UPC_E is the one exception: the JS port's UPCEReader
+  cannot read any UPC-E, so its 51-module guard structure is asserted instead.
 - Scanner: unit-tested as pure helpers (`scanner.ts`: detector-name mapping,
   unsupported-format rejection, brand-hint ordering) and e2e-tested through the real
   `getUserMedia` path with Chromium's fake camera and a stubbed detector.
@@ -335,6 +340,9 @@ rollback decisions easy.
 11. ✅ Session revocation (`token_version`, migration 002) + break-glass admin reset
 12. ✅ Sync invariants: full pull never discards unflushed local mutations; rejected
     ops are counted and shown instead of silently dropped
+13. ✅ Full symbology set (EAN_8, UPC_E, ITF, CODABAR, CODE_93, AZTEC, DATA_MATRIX,
+    PDF_417 added to scan + render + validation + schema), round-trip suite extended
+    to every symbology
 
 ## 11. UI design system
 

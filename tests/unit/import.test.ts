@@ -23,11 +23,18 @@ describe('LoyalFamily export parser (loyalfamily-json-v1)', () => {
 		expect(delhaize.id).toBe('11111111-1111-4111-8111-111111111111'); // our own ids are kept
 	});
 
-	it('unsupported symbology (ITF) falls back to a guess, custom brand stays null', () => {
+	it('symbologies the app supports are kept as-is, custom brand stays null', () => {
 		const local = result.cards.find((c) => c.name === 'Local shop')!;
 		expect(local.brand_id).toBeNull();
-		expect(local.symbology).toBe('CODE_128'); // 8-digit numeric guess
+		expect(local.symbology).toBe('ITF'); // supported since the symbology extension
 		expect(local.color).toBe('#123456'); // kept from export
+	});
+
+	it('unknown symbology falls back to a guess', () => {
+		const r = parseExport(
+			JSON.stringify([{ id: '44444444-4444-4444-8444-444444444444', name: 'Weird', barcode_value: '12345678', symbology: 'MAXICODE' }])
+		);
+		expect(r.cards[0].symbology).toBe('CODE_128'); // 8-digit numeric guess
 	});
 
 	it('QR export maps to our QR symbology', () => {

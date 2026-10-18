@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { migrate, openDb, closeDb } from '$lib/server/db';
+import { SYMBOLOGIES } from '$lib/types';
 
 describe('db & migrations', () => {
 	it('creates all tables and records the migration', () => {
@@ -18,7 +19,8 @@ describe('db & migrations', () => {
 		const versions = db.prepare('SELECT version, name FROM schema_versions').all();
 		expect(versions).toEqual([
 			{ version: 1, name: '001_init' },
-			{ version: 2, name: '002_token_version' }
+			{ version: 2, name: '002_token_version' },
+			{ version: 3, name: '003_symbologies' }
 		]);
 		db.close();
 	});
@@ -35,7 +37,7 @@ describe('db & migrations', () => {
 		migrate(db);
 		migrate(db);
 		const versions = db.prepare('SELECT COUNT(*) AS c FROM schema_versions').get() as { c: number };
-		expect(versions.c).toBe(2);
+		expect(versions.c).toBe(3);
 		db.close();
 	});
 
@@ -48,7 +50,7 @@ describe('db & migrations', () => {
 		expect(users).toHaveLength(1);
 		expect(users[0].token_version).toBe(0); // existing users get the default
 		expect(cards.map((c) => c.name)).toEqual(['Colruyt card']);
-		expect((db.prepare('SELECT COUNT(*) AS c FROM schema_versions').get() as { c: number }).c).toBe(2);
+		expect((db.prepare('SELECT COUNT(*) AS c FROM schema_versions').get() as { c: number }).c).toBe(3);
 		db.close();
 		fs.rmSync(dir, { recursive: true, force: true });
 	});
@@ -65,6 +67,16 @@ describe('db & migrations', () => {
 			 VALUES ('c1','u1','n','#000000','1','BOGUS','private','2026-01-01','2026-01-01','u1')`
 		);
 		expect(() => insert.run()).toThrow(/CHECK constraint/i);
+
+		// every symbology the app supports must be storable (migration 003)
+		for (const s of SYMBOLOGIES) {
+			db.prepare(
+				`INSERT INTO cards (id, owner_id, name, color, barcode_value, symbology, visibility,
+					created_at, updated_at, updated_by)
+					 VALUES (?,'u1','n','#000000','1',?,'private','2026-01-01','2026-01-01','u1')`
+			).run(`c-${s}`, s);
+		}
+		expect((db.prepare('SELECT COUNT(*) AS c FROM cards').get() as { c: number }).c).toBe(SYMBOLOGIES.length);
 		db.close();
 	});
 });

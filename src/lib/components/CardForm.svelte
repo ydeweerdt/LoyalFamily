@@ -33,6 +33,9 @@
 	let errorMsg = $state('');
 	let busy = $state(false);
 
+	// digit-only symbologies get the phone's numeric keypad, the rest a normal keyboard
+	const NUMERIC = ['EAN_8', 'EAN_13', 'UPC_A', 'UPC_E', 'ITF', 'CODABAR'];
+
 	const ean13Bad = $derived(
 		values.symbology === 'EAN_13' && values.barcode_value.length === 13 && !validEan13Checksum(values.barcode_value)
 	);
@@ -75,7 +78,7 @@
 				maxlength={512}
 				required
 				autocomplete="off"
-				inputmode="numeric"
+				inputmode={NUMERIC.includes(values.symbology) ? 'numeric' : 'text'}
 				autocorrect="off"
 				autocapitalize="off"
 				spellcheck={false}

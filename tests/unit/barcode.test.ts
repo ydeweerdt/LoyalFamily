@@ -1,21 +1,18 @@
 /**
- * Barcode round-trip tests (DESIGN §8): render with the exact libraries the app
- * uses (JsBarcode, node-qrcode) → rasterize → decode with ZXing → assert equality.
- * This is our guarantee that whatever we draw, real scanners can read.
+ * Barcode round-trip tests (REQUIREMENTS §5a): render with the exact libraries the app
+ * uses (JsBarcode, node-qrcode, @zxing/library writers) → rasterize → decode with
+ * ZXing → assert equality. This is our guarantee that whatever we draw, real scanners
+ * can read — for every symbology in SYMBOLOGIES.
  */
 import { describe, it, expect } from 'vitest';
 import JsBarcode from 'jsbarcode';
 import QRCode from 'qrcode';
 import { JSDOM } from 'jsdom';
-import {
-	BinaryBitmap,
-	BarcodeFormat,
-	DecodeHintType,
-	HybridBinarizer,
-	MultiFormatReader,
-	RGBLuminanceSource
-} from '@zxing/library';
+import { BarcodeFormat, BinaryBitmap, DecodeHintType, HybridBinarizer, MultiFormatReader, RGBLuminanceSource } from '@zxing/library';
 
+import { svg2d } from '$lib/domain/render';
+import { SCANNABLE } from '$lib/domain/scanner';
+import { SYMBOLOGIES } from '$lib/types';
 const dom = new JSDOM('<!doctype html><svg id="bc" xmlns="http://www.w3.org/2000/svg"></svg>');
 // JsBarcode's SVG renderer needs a DOM
 (globalThis as Record<string, unknown>).document = dom.window.document;
@@ -90,12 +87,12 @@ function decode(pixels: Uint8Array, width: number, height: number, format: Barco
 	return new MultiFormatReader().decode(bitmap, hints).getText();
 }
 
-function roundTrip1D(value: string, format: string, zxing: BarcodeFormat): string {
+function roundTrip1D(value: string, format: string, zxingFormat: BarcodeFormat): string {
 	const el = dom.window.document.getElementById('bc')!;
 	el.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
 	JsBarcode(el, value, { format, width: 2, height: 60, margin: 10, displayValue: false });
 	const img = rasterizeSvg(el.outerHTML);
-	return decode(img.pixels, img.width, img.height, zxing);
+	return decode(img.pixels, img.width, img.height, zxingFormat);
 }
 
 function roundTripQR(value: string): string {
@@ -115,16 +112,78 @@ function roundTripQR(value: string): string {
 	return decode(pixels, width, width, BarcodeFormat.QR_CODE);
 }
 
-describe('barcode round-trip: render → decode → equal (DESIGN §8)', () => {
+/** AZTEC / DATA_MATRIX: the app's own BitMatrix SVG → pixels → ZXing. */
+function roundTrip2D(value: string, symbology: string, format: BarcodeFormat): string {
+	const svg = svg2d(value, symbology);
+	const size = Number(/viewBox="0 0 (\d+) \d+"/.exec(svg)![1]);
+	const d = /d="([^"]+)"/.exec(svg)![1];
+	const modules: number[][] = Array.from({ length: size }, () => new Array<number>(size).fill(0));
+	// svg2d merges a row's dark modules into runs: M<x> <y>h<run>v1h-<run>z
+	for (const m of d.matchAll(/M(\d+) (\d+)h(\d+)v1h-\3z/g)) {
+		const x = Number(m[1]);
+		const y = Number(m[2]);
+		for (let i = 0; i < Number(m[3]); i++) modules[y][x + i] = 1;
+	}
+	const scale = 4;
+	const quiet = 12;
+	const width = (size + quiet * 2) * scale;
+	const pixels = new Uint8Array(width * width).fill(255);
+	for (let y = 0; y < size; y++)
+		for (let x = 0; x < size; x++)
+			if (modules[y][x])
+				for (let dy = 0; dy < scale; dy++)
+					for (let dx = 0; dx < scale; dx++)
+						pixels[((y + quiet) * scale + dy) * width + (x + quiet) * scale + dx] = 0;
+	return decode(pixels, width, width, format);
+}
+
+describe('barcode round-trip: render → decode → equal (REQUIREMENTS §5a)', () => {
+	it('every supported symbology is rendered, or has a documented fallback', () => {
+		const rendered = ['EAN_8', 'EAN_13', 'UPC_A', 'UPC_E', 'ITF', 'CODABAR', 'CODE_39', 'CODE_93', 'CODE_128', 'QR', 'AZTEC', 'DATA_MATRIX'];
+		// PDF_417: @zxing/library ships a PDF417 *reader* only, so the card shows the value.
+		expect(SYMBOLOGIES.filter((s) => !rendered.includes(s))).toEqual(['PDF_417']);
+	});
+
+	it('the scanner is offered every supported symbology', () => {
+		const names = SCANNABLE.map((f) => BarcodeFormat[f]);
+		expect(names).toEqual(
+			expect.arrayContaining(['EAN_13', 'EAN_8', 'UPC_A', 'UPC_E', 'ITF', 'CODABAR', 'CODE_39', 'CODE_93', 'CODE_128', 'QR_CODE', 'AZTEC', 'DATA_MATRIX', 'PDF_417'])
+		);
+	});
+
 	it('EAN-13', () => {
 		for (const v of ['4006381333931', '5400141092769', '0123456789012']) {
 			expect(roundTrip1D(v, 'ean13', BarcodeFormat.EAN_13)).toBe(v);
 		}
 	});
 
+	it('EAN-8', () => {
+		for (const v of ['96385074', '40171234', '12345670']) {
+			expect(roundTrip1D(v, 'ean8', BarcodeFormat.EAN_8)).toBe(v);
+		}
+	});
+
 	it('UPC-A', () => {
 		for (const v of ['590123412342', '722310011841']) {
 			expect(roundTrip1D(v, 'upc', BarcodeFormat.UPC_A)).toBe(v);
+		}
+	});
+
+	it('ITF (Interleaved 2 of 5)', () => {
+		for (const v of ['123456', '240000000000', '0012345678']) {
+			expect(roundTrip1D(v, 'itf', BarcodeFormat.ITF)).toBe(v);
+		}
+	});
+
+	it('CODABAR (readers report the A…A start/stop characters)', () => {
+		for (const v of ['12345678', '0123456789', '1234-5678']) {
+			expect(roundTrip1D(v, 'codabar', BarcodeFormat.CODABAR).replace(/^[A-D]|[A-D]$/g, '')).toBe(v);
+		}
+	});
+
+	it('Code 93', () => {
+		for (const v of ['HELLO-123', 'ABC.$/+', 'LOYALFAMILY']) {
+			expect(roundTrip1D(v, 'code93', BarcodeFormat.CODE_93)).toBe(v);
 		}
 	});
 
@@ -152,6 +211,55 @@ describe('barcode round-trip: render → decode → equal (DESIGN §8)', () => {
 			'4501234567890'
 		]) {
 			expect(roundTripQR(v)).toBe(v);
+		}
+	});
+
+	it('AZTEC', () => {
+		for (const v of ['4501234567890', 'https://loyalfamily.example/c/abc123', 'X'.repeat(100)]) {
+			expect(roundTrip2D(v, 'AZTEC', BarcodeFormat.AZTEC)).toBe(v);
+		}
+	});
+
+	it('DATA_MATRIX', () => {
+		for (const v of ['4501234567890', 'https://loyalfamily.example/c/abc123', 'X'.repeat(100)]) {
+			expect(roundTrip2D(v, 'DATA_MATRIX', BarcodeFormat.DATA_MATRIX)).toBe(v);
+		}
+	});
+
+	// ZXing-js (the decoder available to tests) has a broken UPCEReader — it cannot read
+	// any UPC-E, ours or hand-built. The native BarcodeDetector reads UPC-E fine, so the
+	// structure the spec demands is checked instead: 51 modules, 101 start guard,
+	// 010101 end guard.
+	it('UPC-E renders 51 modules between the spec guard patterns', () => {
+		for (const v of ['012345', '421000', '04210007']) {
+			const el = dom.window.document.getElementById('bc')!;
+			el.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+			JsBarcode(el, v, { format: 'upce', width: 1, height: 40, margin: 0, displayValue: false });
+			// rebuild the module string from the bars (width 1 = 1 module, gaps stay 0)
+			const bars: { x: number; w: number }[] = [];
+			let gx = 0;
+			for (const tag of el.outerHTML.matchAll(/<(g|rect|\/g)\b[^>]*>/g)) {
+				const t = tag[0];
+				if (t.startsWith('</g')) gx = 0;
+				else if (t.startsWith('<g')) gx = Number(/translate\(([-\d.]+),/.exec(t)?.[1] ?? 0);
+				else if (!/fill="#ffffff"/i.test(t))
+					bars.push({ x: Number(/x="([-\d.]+)"/.exec(t)![1]) + gx, w: Number(/width="([-\d.]+)"/.exec(t)![1]) });
+			}
+			let modules = '';
+			let pos = 0;
+			for (const b of bars.sort((a, c) => a.x - c.x)) {
+				while (pos < b.x) {
+					modules += '0';
+					pos++;
+				}
+				while (pos < b.x + b.w) {
+					modules += '1';
+					pos++;
+				}
+			}
+			expect(modules.length, v).toBe(51);
+			expect(modules.startsWith('101'), v).toBe(true); // start guard
+			expect(modules.endsWith('010101'), v).toBe(true); // end guard
 		}
 	});
 

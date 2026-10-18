@@ -24,7 +24,7 @@ export interface Card {
 	name: string;
 	color: string;
 	barcode_value: string;
-	symbology: 'EAN_13' | 'UPC_A' | 'CODE_128' | 'CODE_39' | 'QR';
+	symbology: Symbology;
 	visibility: 'private' | 'shared';
 	comment: string | null;
 	created_at: string;
@@ -33,4 +33,20 @@ export interface Card {
 	deleted_at: string | null;
 }
 
-export const SYMBOLOGIES = ['EAN_13', 'UPC_A', 'CODE_128', 'CODE_39', 'QR'] as const;
+export const SYMBOLOGIES = [
+	'EAN_8',
+	'EAN_13',
+	'UPC_A',
+	'UPC_E',
+	'ITF',
+	'CODABAR',
+	'CODE_39',
+	'CODE_93',
+	'CODE_128',
+	'QR',
+	'AZTEC',
+	'DATA_MATRIX',
+	'PDF_417'
+] as const;
+
+export type Symbology = (typeof SYMBOLOGIES)[number];

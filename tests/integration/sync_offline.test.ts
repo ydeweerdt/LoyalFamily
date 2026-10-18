@@ -117,7 +117,7 @@ describe('offline queue replay against the real API (golden flow)', () => {
 
 	it('invalid queued op is dropped, valid ones still land', async () => {
 		const q = memQueue();
-		await q.add({ id: 'q1', card_id: ID1, op: 'create', payload: { ...cardPayload, symbology: 'AZTEC' }, ts: 1 });
+		await q.add({ id: 'q1', card_id: ID1, op: 'create', payload: { ...cardPayload, symbology: 'MAXICODE' }, ts: 1 });
 		await q.add({ id: 'q2', card_id: ID2, op: 'create', payload: cardPayload, ts: 2 });
 
 		const res = await flushQueue(q, handlerTransport(alice));
