@@ -4,6 +4,11 @@ on:
   push:
   pull_request:
 
+# least privilege for the default GITHUB_TOKEN (CodeQL: missing-workflow-permissions);
+# the publish job overrides this with packages: write
+permissions:
+  contents: read
+
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
