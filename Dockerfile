@@ -26,7 +26,7 @@ RUN npx svelte-kit sync \
 # ---- e2e: Playwright golden flows against the built production app ----
 # Official Playwright image (browsers preinstalled; tag must match the
 # @playwright/test version pinned in package.json).
-FROM mcr.microsoft.com/playwright:v1.54.1-noble AS e2e
+FROM mcr.microsoft.com/playwright:v1.64.1-noble AS e2e
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
