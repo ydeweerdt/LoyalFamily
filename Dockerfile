@@ -3,7 +3,7 @@
 
 # Digest-pinned: a mutable tag could be republished under us. Dependabot bumps
 # these (see .github/dependabot.yml).
-FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS base
+FROM node:26-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS base
 WORKDIR /app
 
 # ---- deps: full install (incl. dev toolchain for build/test stages) ----
@@ -51,7 +51,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts
 
 # ---- runtime: minimal shipped image ----
-FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS runtime
+FROM node:26-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS runtime
 ENV NODE_ENV=production
 ENV PORT=8080
 ENV DATA_DIR=/data
