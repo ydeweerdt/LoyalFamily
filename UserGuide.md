@@ -25,8 +25,8 @@ Open `http://localhost:3000`:
 3. Invite family members: **Admin → Create invite link** → share the one-time
    link (valid 7 days).
 
-Before using this beyond a quick trial, **change `COOKIE_SECRET`** in
-`docker-compose.yaml` (see §4).
+Before using this beyond a quick trial, set a real `COOKIE_SECRET`: put it in an
+untracked `.env` next to `docker-compose.yaml` (see §4).
 
 ## 3. Daily use
 
@@ -56,7 +56,7 @@ version. A rejected change is never silent.
 > For real family use, put the container behind your TLS proxy (§6) or use
 > Tailscale Serve.
 
-Set these in `docker-compose.yaml` (or your orchestrator):
+Set these in `.env` next to `docker-compose.yaml` (`echo "COOKIE_SECRET=$(openssl rand -hex 32)" > .env`) or in your orchestrator:
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -118,7 +118,7 @@ services:
     ports:
       - "3000:8080"          # host port your proxy points at
     environment:
-      COOKIE_SECRET: <openssl rand -hex 32>
+      COOKIE_SECRET: ${COOKIE_SECRET:?see .env}   # real value lives in .env
       PUBLIC_URL: https://loyalfamily.example.net
       TZ: Europe/Brussels
     volumes:

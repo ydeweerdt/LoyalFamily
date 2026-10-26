@@ -5,7 +5,10 @@
 VERSION := $(shell git describe --tags --always 2>/dev/null || echo dev)
 
 lock:
-	docker run --rm -v $(CURDIR):/app -w /app node:22-alpine npm install --package-lock-only --legacy-peer-deps
+	# node:24-alpine = npm 11: it records every optional platform in the lock,
+	# which npm 11 in the e2e image insists on (npm 10 prunes them and then
+	# `npm ci` there fails as out-of-sync).
+	docker run --rm -v $(CURDIR):/app -w /app node:24-alpine npm install --package-lock-only
 
 test:
 	docker build --target test -t loyalfamily-test .

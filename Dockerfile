@@ -40,9 +40,7 @@ RUN npx playwright test
 # ---- prod-deps: production-only node_modules ----
 FROM base AS prod-deps
 COPY package.json package-lock.json ./
-# --legacy-peer-deps: kit's vite/typescript peers are build-time only; the
-# built server needs kit's regular deps + svelte + native modules, nothing else.
-RUN npm ci --omit=dev --legacy-peer-deps
+RUN npm ci --omit=dev
 
 # ---- runtime: minimal shipped image ----
 FROM node:22-alpine AS runtime
@@ -54,6 +52,10 @@ WORKDIR /app
 RUN mkdir -p /data && chown -R app:app /data
 COPY --from=prod-deps --chown=app:app /app/node_modules ./node_modules
 COPY --from=build  --chown=app:app /app/build          ./build
+# The container only ever runs `node build/index.js`: npm (17 MB, with its own
+# unfixed advisories in brace-expansion/pacote/picomatch/sigstore) is pure surface.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn* \
+         /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg
 USER app
 EXPOSE 8080
 VOLUME /data

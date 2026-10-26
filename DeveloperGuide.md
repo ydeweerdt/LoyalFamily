@@ -14,7 +14,7 @@ make dev      # Vite dev server with hot reload at http://localhost:5173
 make build    # build the production runtime image (loyalfamily:<git-describe> + :latest)
 make run      # build + docker compose up (production shape, http://localhost:3000)
 make backup   # hot SQLite backup inside the running container (UserGuide §5)
-make lock     # regenerate package-lock.json (see §5 — uses --legacy-peer-deps on purpose)
+make lock     # regenerate package-lock.json (see §5 — runs npm 11 in node:24-alpine)
 ```
 
 `make test` is the gate: it runs `svelte-check` and the full Vitest suite
@@ -149,11 +149,10 @@ Notes for writing e2e specs here:
 
 ## 5. Dependencies & the lockfile
 
-- `make lock` regenerates `package-lock.json` with
-  **`--legacy-peer-deps`**. This is deliberate: SvelteKit declares `vite` and
-  `typescript` as *peer* deps, and npm's default peer auto-install would drag
-  ~50 MB of build tools into the production image. Production runtime needs
-  only: `@sveltejs/kit`, `svelte`, `better-sqlite3`, `@node-rs/argon2`.
+- `make lock` regenerates `package-lock.json` inside **node:24-alpine** (npm 11).
+  Deliberate: npm 11 records every optional platform package in the lock, and the
+  npm in the e2e image (npm 11) rejects a lock written by npm 10 as out-of-sync.
+  Peer deps resolve cleanly now (kit 3 + vite 8), so no `--legacy-peer-deps`.
 - Build-time-only libraries (`vite`, `adapter-node`, `zxing`, `jsbarcode`,
   `qrcode`, …) belong in **devDependencies** — they are bundled into the
   client at build time and must not appear in the runtime image.
@@ -213,7 +212,7 @@ UI reports it.
 | `deps` | full `npm ci` (dev + prod) — base for build/test/dev |
 | `build` | `svelte-kit sync && vite build` (adapter-node output in `build/`) |
 | `test` | `npm run check` + `vitest run` — this is `make test` |
-| `prod-deps` | `npm ci --omit=dev --legacy-peer-deps` (~26 MB) |
+| `prod-deps` | `npm ci --omit=dev` (~26 MB) |
 | `e2e` / `e2e-run` | Playwright image + built app + golden flows (`make e2e`) |
 | `runtime` | final image: prod deps + build output, non-root, `PORT=8080`, `DATA_DIR=/data`, healthcheck |
 

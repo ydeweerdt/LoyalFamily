@@ -11,8 +11,9 @@ services:
     environment:
       PORT: "8080"
       DATA_DIR: /data
-      # CHANGE THIS: generate e.g. with `openssl rand -hex 32`
-      COOKIE_SECRET: change-me-00000000000000000000000000000000
+      # Real secret lives in the untracked .env next to this file:
+      #   echo "COOKIE_SECRET=$(openssl rand -hex 32)" > .env
+      COOKIE_SECRET: "${COOKIE_SECRET:?missing: create .env with COOKIE_SECRET=$(openssl rand -hex 32)}"
       PUBLIC_URL: http://localhost:3000
       TZ: Europe/Brussels
     volumes:
