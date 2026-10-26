@@ -25,6 +25,23 @@ jobs:
       - name: runtime image
         run: docker build -t loyalfamily:latest .
 
+      # fails the build on HIGH/CRITICAL in what actually ships (the prod-deps stage
+      # is what the runtime image copies); the two known LOW kit advisories are
+      # mitigated — see DESIGN §10
+      - name: production dependency audit
+        run: |
+          docker build --target prod-deps -t loyalfamily-prod-deps .
+          docker run --rm loyalfamily-prod-deps npm audit --omit=dev --audit-level=high
+
+      - name: runtime image scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: loyalfamily:latest
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+
   # Push the runtime image to GitHub Packages so any machine can just pull it.
   publish:
     needs: test-and-build

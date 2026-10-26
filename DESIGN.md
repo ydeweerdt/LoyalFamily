@@ -222,8 +222,12 @@ retryable → the op stays queued and FIFO order is never reordered.
 - **No CSRF token** (decision, not omission): all mutations are same-origin JSON
   writes and `SameSite=Lax` stops cross-site writes. Revisit if a non-browser
   client ever gets write access.
-- **No in-app rate limiting** (decision): delegated to the reverse proxy in front
-  of the container. Documented in UserGuide.
+- **Rate limiting**: one in-app backstop only — 5 failed password verifications on
+  a username+IP pair freeze that pair for 15 minutes (`passwordThrottle` in
+  `src/lib/server/api.ts`, 429). It exists because argon2 verification is expensive
+  per attempt; it is in-memory (a restart clears it) and keyed per username, so a
+  frozen `alice` never freezes `bob`. The real limiter still belongs in the reverse
+  proxy in front of the container (UserGuide §6).
 - Invite tokens: 128-bit random hex, single-use, 7-day expiry, never logged.
 - Card values never in URLs; API requires auth except `/api/register`, `/api/join`.
 - Break-glass: `RESET_ADMIN` + `RESET_ADMIN_PASSWORD` reset one user's password at
@@ -325,7 +329,7 @@ Tooling:
 
 CI (GitHub Actions or a Gitea runner):
 identical to local — `docker build --target test .`, `docker build --target e2e .`,
-then the runtime image build; on every push.
+then the runtime image build and the supply-chain gates (§10); on every push.
 Release = tag → publish image. `CHANGELOG.md` maintained per release to make
 rollback decisions easy.
 
@@ -358,6 +362,38 @@ rollback decisions easy.
     same-text-but-different one (`qrcode` dropped from the dependencies)
 15. ✅ Phone back button matches the flow: open overlays own a history entry and are
     peeled one layer at a time; `/add` replaces itself in history after save/cancel
+16. ✅ Supply chain: digest-pinned bases, Dependabot, `npm audit` + Trivy CI gates,
+    npm deleted from the runtime image (§10) + the in-app login throttle (§6)
+
+## 10. Supply chain (what CI enforces)
+
+- **Nothing mutable is pulled**: base images are pinned by digest in the Dockerfile
+  (a tag can be republished under us); every Action is pinned to a SHA. Dependabot
+  (`.github/dependabot.yml`) refreshes both weekly — npm minor/patch as one grouped
+  PR, majors separate so they get reviewed.
+- **CI gates** (after the runtime image build): `npm audit --omit=dev
+  --audit-level=high` on the production dependency tree, and a Trivy scan of the
+  runtime image (`CRITICAL,HIGH`, `ignore-unfixed`). Both fail the build.
+- **The runtime image has no package manager**: `npm`, `npx`, `corepack` and `yarn`
+  are deleted from it. The container only ever runs `node build/index.js`; the rest
+  is attack surface carrying its own unfixed advisories (brace-expansion, pacote,
+  picomatch, sigstore).
+- **Native deps install with `--ignore-scripts`** (§7 prod-deps): better-sqlite3 and
+  @node-rs/argon2 ship the `.node` binary inside the tarball, so a production
+  install needs no compiler and runs no third-party lifecycle script. The runtime
+  stage then `require()`s both — a missing binary fails the build, not the container
+  on someone's NAS.
+- **Known advisories kept open on purpose** (both LOW, both fixable only in kit 3, a
+  breaking change):
+  - `GHSA-pfhg-q3qv-9q6r` — kit ≤3 treats a `//host/...` path as an absolute redirect
+    target in enhanced form submissions. Mitigated in `src/hooks.server.ts`: a
+    `//`-prefixed path gets 400 before kit sees it.
+  - `GHSA-27mw-82g8-phjj` — kit XSS via an untrusted `cache-control` header on a
+    prerendered page. Not applicable: nothing in `src/` opts into prerendering and no
+    response header is built from request data.
+
+  Staying on kit 2 is deliberate: it is the release line the whole suite is tested
+  against, and kit 3 is a migration to review, not a Dependabot auto-merge.
 
 ## 11. UI design system
 

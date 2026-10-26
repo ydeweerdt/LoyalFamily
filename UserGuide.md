@@ -126,8 +126,7 @@ services:
     restart: unless-stopped
 ```
 
-Caddy reverse proxy example (with the rate limiting the app deliberately leaves to
-the proxy):
+Caddy reverse proxy example:
 
 ```
 loyalfamily.example.net {
@@ -138,6 +137,12 @@ loyalfamily.example.net {
 (nginx: proxy_pass to `http://localhost:3000` with the usual
 `proxy_set_header X-Forwarded-Proto $scheme`. Note the app itself does not read
 `X-Forwarded-Proto` — cookie security follows `PUBLIC_URL`.)
+
+The app ships one limiter of its own: 5 failed logins (or failed password changes)
+from the same IP freeze that username+IP pair for 15 minutes. It is in-process — a
+counter restart clears it — so for anything reachable from the open internet add a
+limiter at the proxy too (Caddy needs the [caddy-ratelimit](https://github.com/caddyserver/caddy-ratelimit)
+plugin; nginx `limit_req`).
 
 The container runs as a non-root user, has a built-in healthcheck against
 `/api/health`, and writes only to `/data`. A read-only rootfs
@@ -191,6 +196,7 @@ they are set, every restart resets that password again.
 | Symptom | Fix |
 |---|---|
 | `COOKIE_SECRET must be set …` at startup | Set the variable (§4) |
+| Login answers “too many failed attempts” (429) | 5 wrong passwords from that IP; wait 15 minutes (§6) or restart the container |
 | Login drops you off / cookie rejected over HTTPS | `PUBLIC_URL` must start with `https` when you serve HTTPS |
 | “Offline — N changes waiting to sync” never clears | Server unreachable or the queued op was rejected; reload once the server is reachable — invalid queued ops are dropped and the server truth is pulled |
 | “N change(s) could not be saved” | The server rejected that mutation for good (bad value, card deleted, not your card). The card shows the server's version; re-apply the edit if it was legitimate |

@@ -81,6 +81,17 @@ describe('auth API (critical flow 1: register-first-admin → login → me)', ()
 		expect(cookieOf(res)).toMatch(/^session=.+\./);
 	});
 
+	it('login is frozen for 15 min after 5 failures from one address', async () => {
+		const ip = '203.0.113.7';
+		for (let i = 0; i < 5; i++) {
+			expect((await login(jsonReq('/api/login', { username: 'alice', password: 'wrong-password' }), ip)).status).toBe(401);
+		}
+		// even the right password is refused while the pair is frozen
+		expect((await login(jsonReq('/api/login', { username: 'alice', password: 'wonderwall1' }), ip)).status).toBe(429);
+		// another address is unaffected
+		expect((await login(jsonReq('/api/login', { username: 'alice', password: 'wonderwall1' }), '203.0.113.8')).status).toBe(200);
+	});
+
 	it('cards requires auth', async () => {
 		const res = await cards(req('/api/cards'));
 		expect(res.status).toBe(401);

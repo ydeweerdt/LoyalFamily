@@ -1,7 +1,9 @@
 # LoyalFamily — one multi-stage Dockerfile for dev, test and production.
 # Local and CI run identical targets:  docker build --target test .
 
-FROM node:22-alpine AS base
+# Digest-pinned: a mutable tag could be republished under us. Dependabot bumps
+# these (see .github/dependabot.yml).
+FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS base
 WORKDIR /app
 
 # ---- deps: full install (incl. dev toolchain for build/test stages) ----
@@ -26,10 +28,12 @@ RUN npx svelte-kit sync \
 # ---- e2e: Playwright golden flows against the built production app ----
 # Official Playwright image (browsers preinstalled; tag must match the
 # @playwright/test version pinned in package.json).
-FROM mcr.microsoft.com/playwright:v1.64.1-noble AS e2e
+FROM mcr.microsoft.com/playwright:v1.64.1-noble@sha256:47b510dd9230bf0b9bfc9b20102241e577ea7a99334ab4c3ca19f19770e9b8ea AS e2e
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# --ignore-scripts here too: the Playwright image has no make/g++, and skipping the
+# install scripts also skips Playwright's browser download (this image ships them).
+RUN npm ci --ignore-scripts
 COPY --from=build /app/build ./build
 COPY playwright.config.ts ./
 COPY tests ./tests
@@ -40,10 +44,14 @@ RUN npx playwright test
 # ---- prod-deps: production-only node_modules ----
 FROM base AS prod-deps
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+# --ignore-scripts: better-sqlite3 13 and @node-rs/argon2 ship the native binary
+# inside the tarball (prebuilds/linuxmusl-*.node). Without this flag npm sees
+# better-sqlite3's binding.gyp and runs node-gyp, which needs a compiler this
+# stage deliberately does not have.
+RUN npm ci --omit=dev --ignore-scripts
 
 # ---- runtime: minimal shipped image ----
-FROM node:22-alpine AS runtime
+FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS runtime
 ENV NODE_ENV=production
 ENV PORT=8080
 ENV DATA_DIR=/data
@@ -52,6 +60,9 @@ WORKDIR /app
 RUN mkdir -p /data && chown -R app:app /data
 COPY --from=prod-deps --chown=app:app /app/node_modules ./node_modules
 COPY --from=build  --chown=app:app /app/build          ./build
+# the --ignore-scripts install above is only honest if the shipped binaries load:
+# fail the build here, not the container on the customer's machine.
+RUN node -e "require('better-sqlite3'); require('@node-rs/argon2')"
 # The container only ever runs `node build/index.js`: npm (17 MB, with its own
 # unfixed advisories in brace-expansion/pacote/picomatch/sigstore) is pure surface.
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn* \

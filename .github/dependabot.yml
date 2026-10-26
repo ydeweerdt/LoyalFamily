@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      # one PR for all minor/patch bumps, majors stay separate so they are reviewed
+      minors:
+        patterns: ['*']
+        update-types: ['minor', 'patch']
+
+  # keeps the digest pins in the Dockerfile fresh
+  - package-ecosystem: docker
+    directories:
+      - /
+      - /.github/workflows
+    schedule:
+      interval: weekly

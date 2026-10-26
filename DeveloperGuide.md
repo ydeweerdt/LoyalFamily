@@ -212,9 +212,9 @@ UI reports it.
 | `deps` | full `npm ci` (dev + prod) — base for build/test/dev |
 | `build` | `svelte-kit sync && vite build` (adapter-node output in `build/`) |
 | `test` | `npm run check` + `vitest run` — this is `make test` |
-| `prod-deps` | `npm ci --omit=dev` (~26 MB) |
+| `prod-deps` | `npm ci --omit=dev --ignore-scripts` (~26 MB; native binaries ship in the tarballs) |
 | `e2e` / `e2e-run` | Playwright image + built app + golden flows (`make e2e`) |
-| `runtime` | final image: prod deps + build output, non-root, `PORT=8080`, `DATA_DIR=/data`, healthcheck |
+| `runtime` | final image: prod deps + build output, non-root, `PORT=8080`, `DATA_DIR=/data`, healthcheck; native deps `require()`d at build time, npm deleted |
 
 Debug a running production container:
 

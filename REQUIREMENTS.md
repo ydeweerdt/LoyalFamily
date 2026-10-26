@@ -239,9 +239,11 @@ attachment is a v2 candidate.
 - Session cookie over HTTPS uses the `__Host-session` prefix (Secure + Path=/ +
   no Domain); over plain HTTP it is a plain `session` cookie without `Secure`,
   which is why `PUBLIC_URL` must be set to the real https URL.
-- **Rate limiting is not implemented in the app** — it is delegated to the reverse
-  proxy in front of it (Caddy `rate_limited` / Tailscale ACLs). A family instance
-  behind a tunnel is not a brute-force target; a port-forwarded one is.
+- **Rate limiting**: the app carries one small backstop — 5 failed password
+  verifications on a username+IP pair freeze that pair for 15 minutes (429). It is
+  in-memory (a restart clears it) and does not replace the reverse proxy's limiter
+  (Caddy `rate_limited` / Tailscale ACLs). A family instance behind a tunnel is not
+  a brute-force target; a port-forwarded one is.
 - No CSRF token by design (see §7).
 
 ## 10. Deployment (Docker)
@@ -373,8 +375,8 @@ attachment is a v2 candidate.
     no email-based recovery — instead a documented `RESET_ADMIN` break-glass (§7).
 12. **Sessions**: signed 30-day cookie, revocable per user via `token_version`
     (§7). No server-side session table.
-13. **No CSRF token** (SameSite=Lax is the defense) and **no in-app rate limiting**
-    (delegated to the reverse proxy) — §7, §9.
+13. **No CSRF token** (SameSite=Lax is the defense); rate limiting is a proxy job
+    with a 429 backstop in the app for password endpoints — §7, §9.
 14. **Localization**: English + Dutch, browser auto-detect with a Settings override
     (§2b). Other languages are v2 candidates.
 15. **Import never merges**: it only adds cards owned by the importer (§8).

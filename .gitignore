@@ -9,3 +9,4 @@ data/
 # committed migration fixture (REQUIREMENTS §11) — the opposite of a runtime DB
 !tests/fixtures/*.db
 .DS_Store
+session.txt

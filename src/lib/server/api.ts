@@ -54,3 +54,37 @@ export async function parseJsonBody(request: Request): Promise<Record<string, un
 		return null;
 	}
 }
+
+/**
+ * Backstop for the two endpoints that verify a password (login, self-service
+ * change): 5 failures on the same username+IP freeze that pair for 15 minutes.
+ * In-memory on purpose — a restart clears it, and the real limiter belongs in the
+ * TLS proxy (UserGuide §6). Without it, argon2 verification is an online
+ * brute-force target and every attempt costs the server CPU.
+ * /api/join is not throttled: it rejects a bad/used/expired invite token before it
+ * hashes anything, and 128-bit random tokens are not guessable. /api/register is
+ * closed the moment the first user exists.
+ */
+const failedAttempts = new Map<string, { n: number; blockedUntil: number }>();
+
+export function passwordThrottle(key: string): Response | null {
+	const a = failedAttempts.get(key);
+	if (a && a.blockedUntil > Date.now()) return error('too many failed attempts, try again later', 429);
+	return null;
+}
+
+export function recordPasswordFailure(key: string): void {
+	if (failedAttempts.size > 10_000) failedAttempts.clear(); // shortcut: no LRU, a family-sized app never gets here
+	const a = failedAttempts.get(key) ?? { n: 0, blockedUntil: 0 };
+	if (a.blockedUntil > Date.now()) return;
+	a.n += 1;
+	if (a.n >= 5) {
+		a.blockedUntil = Date.now() + 15 * 60_000;
+		a.n = 0;
+	}
+	failedAttempts.set(key, a);
+}
+
+export function clearPasswordFailures(key: string): void {
+	failedAttempts.delete(key);
+}

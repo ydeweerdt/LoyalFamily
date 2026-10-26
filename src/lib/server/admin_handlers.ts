@@ -1,7 +1,7 @@
 /**
  * Invite + admin handlers (REQUIREMENTS §7). Pure functions; +server.ts wraps them.
  */
-import { error, json, parseJsonBody, requireAdmin, requireUser } from './api';
+import { error, json, parseJsonBody, requireAdmin, requireUser, passwordThrottle, recordPasswordFailure, clearPasswordFailures } from './api';
 import { createSessionToken, sessionCookieHeader } from './sessions';
 import {
 	countAdmins,
@@ -126,17 +126,22 @@ export function deleteUserHandler(request: Request, id: string): Response {
 
 /* ---------- self-service password change ---------- */
 
-export async function changePasswordHandler(request: Request): Promise<Response> {
+export async function changePasswordHandler(request: Request, clientAddress = ''): Promise<Response> {
 	const r = requireUser(request);
 	if (r.unauthorized) return r.unauthorized;
 	const body = await parseJsonBody(request);
 	if (!body || typeof body.current_password !== 'string' || !validPassword(body.new_password)) {
 		return error('current_password and new_password (≥8 chars) are required', 400);
 	}
+	const key = `pw|${r.user.id}|${clientAddress}`;
+	const blocked = passwordThrottle(key);
+	if (blocked) return blocked;
 	const user = getUser(r.user.id)!;
 	if (!(await verifyPassword(user.password_hash, body.current_password))) {
+		recordPasswordFailure(key);
 		return error('current password is incorrect', 403);
 	}
+	clearPasswordFailures(key);
 	setPasswordHash(user.id, await hashPassword(String(body.new_password)));
 	// token_version was bumped: other devices are logged out, this one gets a fresh cookie
 	const fresh = getUser(user.id)!;

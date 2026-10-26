@@ -2,7 +2,7 @@
  * Testable request handlers: plain (Request) => Promise<Response> functions.
  * +server.ts files are thin wrappers that re-export them as kit verbs.
  */
-import { error, json, parseJsonBody, requireUser } from './api';
+import { error, json, parseJsonBody, requireUser, passwordThrottle, recordPasswordFailure, clearPasswordFailures } from './api';
 import { countUsers, createUser, hashPassword, findByUsername, toPublicUser, verifyPassword } from './users';
 import { createSessionToken, sessionCookieHeader } from './sessions';
 import { validDisplayName, validPassword, validUsername } from '$lib/domain/validation';
@@ -32,16 +32,21 @@ export async function registerHandler(request: Request): Promise<Response> {
 	return json(user, 201, { 'set-cookie': sessionCookieHeader(createSessionToken(user.id, 0)) }); // new user: token_version 0
 }
 
-export async function loginHandler(request: Request): Promise<Response> {
+export async function loginHandler(request: Request, clientAddress = ''): Promise<Response> {
 	const body = await parseJsonBody(request);
 	if (!body || typeof body.username !== 'string' || typeof body.password !== 'string') {
 		return error('username and password are required', 400);
 	}
+	const key = `login|${body.username.toLowerCase()}|${clientAddress}`;
+	const blocked = passwordThrottle(key);
+	if (blocked) return blocked;
 	const user = findByUsername(body.username);
 	// generic error: no user enumeration
 	if (!user || !(await verifyPassword(user.password_hash, body.password))) {
+		recordPasswordFailure(key);
 		return error('invalid username or password', 401);
 	}
+	clearPasswordFailures(key);
 	return json(toPublicUser(user), 200, {
 		'set-cookie': sessionCookieHeader(createSessionToken(user.id, user.token_version))
 	});
