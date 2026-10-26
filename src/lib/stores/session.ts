@@ -55,7 +55,12 @@ export async function refreshSession(): Promise<void> {
 
 export async function logout(): Promise<void> {
 	try {
-		await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+		await fetch('/api/logout', {
+			method: 'POST',
+			credentials: 'same-origin',
+			// see admin/+page.svelte: kit 3 403s a content-type-less POST
+			headers: { 'content-type': 'application/json' }
+		});
 	} finally {
 		localStorage.removeItem(LS_KEY);
 		await refreshSession();
