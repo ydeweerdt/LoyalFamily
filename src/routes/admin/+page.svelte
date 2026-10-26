@@ -43,8 +43,11 @@
 		const r = await fetch(url, {
 			method,
 			credentials: 'same-origin',
-			headers: body ? { 'content-type': 'application/json' } : undefined,
-			body: body ? JSON.stringify(body) : undefined
+			// kit 3 CSRF-checks POST/DELETE without a content-type as a form
+			// submission, and adapter-node derives an https self-origin even over
+			// http -> those requests get 403. Declare them as JSON API calls.
+			headers: { 'content-type': 'application/json' },
+			body: body === undefined ? undefined : JSON.stringify(body)
 		});
 		if (!r.ok) errorMsg = (await r.json()).error;
 		return r.ok;
@@ -52,7 +55,11 @@
 
 	async function createInvite() {
 		errorMsg = '';
-		const r = await fetch('/api/admin/invites', { method: 'POST', credentials: 'same-origin' });
+		const r = await fetch('/api/admin/invites', {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: { 'content-type': 'application/json' }
+		});
 		if (!r.ok) return void (errorMsg = (await r.json()).error);
 		const invite = await r.json();
 		newInviteId = invite.id;
@@ -63,7 +70,11 @@
 	/** Create a fresh invite and hand the link straight to the mail client. */
 	async function sendInvite() {
 		errorMsg = '';
-		const r = await fetch('/api/admin/invites', { method: 'POST', credentials: 'same-origin' });
+		const r = await fetch('/api/admin/invites', {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: { 'content-type': 'application/json' }
+		});
 		if (!r.ok) return void (errorMsg = (await r.json()).error);
 		const invite = await r.json();
 		await load();
