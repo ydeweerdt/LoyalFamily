@@ -383,17 +383,16 @@ rollback decisions easy.
   install needs no compiler and runs no third-party lifecycle script. The runtime
   stage then `require()`s both — a missing binary fails the build, not the container
   on someone's NAS.
-- **Known advisories kept open on purpose** (both LOW, both fixable only in kit 3, a
-  breaking change):
-  - `GHSA-pfhg-q3qv-9q6r` — kit ≤3 treats a `//host/...` path as an absolute redirect
-    target in enhanced form submissions. Mitigated in `src/hooks.server.ts`: a
-    `//`-prefixed path gets 400 before kit sees it.
-  - `GHSA-27mw-82g8-phjj` — kit XSS via an untrusted `cache-control` header on a
-    prerendered page. Not applicable: nothing in `src/` opts into prerendering and no
-    response header is built from request data.
-
-  Staying on kit 2 is deliberate: it is the release line the whole suite is tested
-  against, and kit 3 is a migration to review, not a Dependabot auto-merge.
+- **Advisories**: kit 3.4.1 + adapter-node 6.0.6 (the pins) are past every advisory
+  published for this stack up to Nov 2026 — including the two HIGH ones that hit the
+  previous pin 3.1.0 (`GHSA-m9j8-jcmv-hp69` server-only import guard can fail, so
+  `$lib/server` crypto could land in the client bundle; `GHSA-3r8g-jcqq-3p5j` form-
+  parsing DoS, not reachable here: no kit form actions or remote functions) and the
+  adapter-node crash-on-malformed-path DoS pair (`GHSA-mw6w-2fmv-pvw3`,
+  `GHSA-rqw3-x7hx-mm3p`).
+  Kept anyway as belt-and-braces: the `//`-prefixed-path 400 in `src/hooks.server.ts`
+  (`GHSA-pfhg-q3qv-9q6r`, fixed in kit 3.0) — a `//host/...` path must never be read
+  as an absolute redirect target.
 
 ## 11. UI design system
 
