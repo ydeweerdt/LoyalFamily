@@ -5,6 +5,8 @@ on:
     # main only: a Dependabot PR would otherwise run the full job twice (one push
     # run on its own branch + one pull_request run).
     branches: [main]
+    # a v-tag publishes an immutable release image (publish job below)
+    tags: ['v*']
   pull_request:
   # A CVE in a digest-pinned base image changes no file here, so without a clock
   # nothing re-runs Trivy / npm audit until the pin or a commit moves.
@@ -52,9 +54,11 @@ jobs:
           format: table
 
   # Push the runtime image to GitHub Packages so any machine can just pull it.
+  # main → :latest + :<sha>; a v-tag → :<version> + :<sha>. Only the tag build is
+  # immutable, same reason the Dockerfile pins base-image digests.
   publish:
     needs: test-and-build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref_type == 'tag')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -68,13 +72,19 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # hardcoded lowercase image name: GHCR rejects repo names with capitals
+      - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        id: meta
+        with:
+          images: ghcr.io/ydeweerdt/loyalfamily
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ github.sha }}
+            type=semver,pattern={{version}}
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           push: true
-          # hardcoded lowercase: GHCR rejects repo names with capitals and
-          # Actions expressions have no tolower()
-          tags: |
-            ghcr.io/ydeweerdt/loyalfamily:latest
-            ghcr.io/ydeweerdt/loyalfamily:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
