@@ -2,7 +2,16 @@ name: CI
 
 on:
   push:
+    # main only: a Dependabot PR would otherwise run the full job twice (one push
+    # run on its own branch + one pull_request run).
+    branches: [main]
   pull_request:
+  # A CVE in a digest-pinned base image changes no file here, so without a clock
+  # nothing re-runs Trivy / npm audit until the pin or a commit moves.
+  # GitHub pauses schedule: after 60 days of repo inactivity.
+  schedule:
+    - cron: '0 3 * * *'   # daily 03:00 UTC
+  workflow_dispatch:
 
 # least privilege for the default GITHUB_TOKEN (CodeQL: missing-workflow-permissions);
 # the publish job overrides this with packages: write
