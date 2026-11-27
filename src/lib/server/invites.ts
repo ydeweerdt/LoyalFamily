@@ -44,8 +44,11 @@ export function revokeInvite(id: string): boolean {
 	return db().prepare('DELETE FROM invites WHERE id = ? AND used_by IS NULL').run(id).changes > 0;
 }
 
-export function redeemInvite(token: string, userId: string): void {
-	db()
-		.prepare('UPDATE invites SET used_by = ?, used_at = ? WHERE token = ?')
-		.run(userId, new Date().toISOString(), token);
+/** Conditional on purpose: 0 changes means another join already claimed this token. */
+export function redeemInvite(token: string, userId: string): boolean {
+	return (
+		db()
+			.prepare('UPDATE invites SET used_by = ?, used_at = ? WHERE token = ? AND used_by IS NULL')
+			.run(userId, new Date().toISOString(), token).changes > 0
+	);
 }

@@ -5,6 +5,7 @@
 import { error, json, parseJsonBody, requireUser, passwordThrottle, recordPasswordFailure, clearPasswordFailures } from './api';
 import { countUsers, createUser, hashPassword, findByUsername, toPublicUser, verifyPassword } from './users';
 import { createSessionToken, sessionCookieHeader } from './sessions';
+import { db } from './db';
 import { validDisplayName, validPassword, validUsername } from '$lib/domain/validation';
 
 /**
@@ -12,9 +13,6 @@ import { validDisplayName, validPassword, validUsername } from '$lib/domain/vali
  * The first user becomes the administrator (REQUIREMENTS §7).
  */
 export async function registerHandler(request: Request): Promise<Response> {
-	if (countUsers() > 0) {
-		return error('registration is closed; ask an admin for an invite link', 403);
-	}
 	const body = await parseJsonBody(request);
 	if (!body) return error('invalid request body', 400);
 
@@ -23,12 +21,21 @@ export async function registerHandler(request: Request): Promise<Response> {
 	if (!validDisplayName(display_name)) return error('display name is required (1-64 chars)', 400);
 	if (!validPassword(password)) return error('password must be at least 8 characters', 400);
 
-	const user = createUser({
-		username,
-		displayName: String(display_name).trim(),
-		passwordHash: await hashPassword(password),
-		role: 'admin'
-	});
+	const passwordHash = await hashPassword(password); // slow, touches no DB: keep it out of the transaction
+
+	// The "is this the first user?" check has to live inside the transaction, otherwise two
+	// simultaneous registrations on a fresh instance both become admin.
+	const user = db().transaction(() => {
+		if (countUsers() > 0) return null;
+		return createUser({
+			username,
+			displayName: String(display_name).trim(),
+			passwordHash,
+			role: 'admin'
+		});
+	})();
+	if (!user) return error('registration is closed; ask an admin for an invite link', 403);
+
 	return json(user, 201, { 'set-cookie': sessionCookieHeader(createSessionToken(user.id, 0)) }); // new user: token_version 0
 }
 

@@ -17,15 +17,19 @@ import {
 	verifyPassword
 } from './users';
 import { createInvite, getInviteByToken, listInvites, redeemInvite, revokeInvite } from './invites';
+import { db } from './db';
 import { validDisplayName, validPassword, validUsername } from '$lib/domain/validation';
 
 /* ---------- join (public, invite-token gated) ---------- */
 
+class InviteAlreadyRedeemed extends Error {}
+
 export async function joinHandler(request: Request): Promise<Response> {
 	const body = await parseJsonBody(request);
 	if (!body || typeof body.token !== 'string') return error('invite token is required', 400);
+	const token = body.token;
 
-	const invite = getInviteByToken(body.token);
+	const invite = getInviteByToken(token);
 	if (!invite) return error('invalid invite link', 404);
 	if (invite.used_by) return error('this invite link has already been used', 400);
 	if (new Date(invite.expires_at) < new Date()) return error('this invite link has expired', 400);
@@ -36,15 +40,28 @@ export async function joinHandler(request: Request): Promise<Response> {
 	if (!validPassword(password)) return error('password must be at least 8 characters', 400);
 	if (findByUsername(String(username))) return error('username is taken', 409);
 
-	const user = createUser({
-		username: String(username),
-		displayName: String(display_name).trim(),
-		passwordHash: await hashPassword(String(password)),
-		role: 'user' // invitees always start as regular users
-	});
-	redeemInvite(invite.token, user.id);
+	const passwordHash = await hashPassword(String(password)); // slow, touches no DB: keep it out of the transaction
 
-	return json(user, 201, { 'set-cookie': sessionCookieHeader(createSessionToken(user.id, 0)) }); // new user: token_version 0
+	// Create + redeem in one transaction: the invite can never be redeemed twice, even
+	// when two joins race (REQUIREMENTS §7: single-use invites).
+	const claim = db().transaction(() => {
+		const user = createUser({
+			username: String(username),
+			displayName: String(display_name).trim(),
+			passwordHash,
+			role: 'user' // invitees always start as regular users
+		});
+		if (!redeemInvite(token, user.id)) throw new InviteAlreadyRedeemed();
+		return user;
+	});
+
+	try {
+		const user = claim();
+		return json(user, 201, { 'set-cookie': sessionCookieHeader(createSessionToken(user.id, 0)) }); // new user: token_version 0
+	} catch (e) {
+		if (e instanceof InviteAlreadyRedeemed) return error('this invite link has already been used', 400);
+		throw e;
+	}
 }
 
 /* ---------- invites (admin) ---------- */
