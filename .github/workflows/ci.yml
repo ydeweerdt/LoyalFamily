@@ -77,10 +77,16 @@ jobs:
         id: meta
         with:
           images: ghcr.io/ydeweerdt/loyalfamily
+          # this action adds :latest on any tag push by default; :latest must stay
+          # the tip of main, so the raw rule below is the only source of it.
+          flavor: |
+            latest=false
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ github.sha }}
-            type=semver,pattern={{version}}
+            # the tag name verbatim (v0.7 → :v0.7): this repo tags v0.1, v0.2 …,
+            # which type=semver would reject as invalid semver.
+            type=ref,event=tag
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           push: true
